@@ -52,6 +52,8 @@ export interface DashboardSettings {
   autoRefresh: boolean;
   refreshDelaySec: number;
   openInNewTab: boolean;
+  /** 把今天的数据导出成 widget-snapshot.json，给以后的 macOS 桌面小组件读（默认关闭） */
+  widgetExport: boolean;
   /* 字数属性：把字数写进笔记属性（默认关闭） */
   wordPropEnabled: boolean;
   wordPropName: string;
@@ -96,6 +98,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   autoRefresh: true,
   refreshDelaySec: 3,
   openInNewTab: true,
+  widgetExport: false,
   wordPropEnabled: false,
   wordPropName: "words",
   wordPropReading: false,
@@ -368,6 +371,20 @@ export class DashboardSettingTab extends PluginSettingTab {
                   const n = parseFloat(v);
                   st.refreshDelaySec = isNaN(n) || n < 0.5 ? 0.5 : n;
                   await save();
+                })
+              ),
+          },
+          {
+            name: L("导出小组件数据", "Export widget data"),
+            desc:
+              L(
+                "把今天的字数、打卡、本周七天、到期任务和今天的日程写进一个 JSON 文件，给以后的 macOS 桌面小组件读。文件里有任务和日程的文字，默认关闭；关掉时文件会被删除。",
+                "Writes today's words, check-in, the week, due tasks and today's agenda to a JSON file for a future macOS desktop widget. The file contains your task and agenda text, so it is off by default; turning it off deletes the file."
+              ) + L(`文件位置：${this.plugin.widgetSnapshotLocation()}`, ` File: ${this.plugin.widgetSnapshotLocation()}`),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.widgetExport).onChange(async (v) => {
+                  await this.plugin.setWidgetExport(v);
                 })
               ),
           },
@@ -710,6 +727,7 @@ export function migrateWritingSettings(settings: DashboardSettings): void {
   // 2.0 之前没有布局：生成默认布局（1.8 的看板 + 6 张新卡片）
   settings.layout = normalizeLayout(settings.layout);
   settings.agenda = sanitizeAgenda(settings.agenda);
+  settings.widgetExport = settings.widgetExport === true;
   settings.celebrated = Array.isArray(settings.celebrated) ? settings.celebrated.filter((x): x is string => typeof x === "string") : [];
 }
 

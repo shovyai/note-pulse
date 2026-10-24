@@ -6,8 +6,9 @@ import { ReportPreviewModal } from "./reports";
 import { ReportKind } from "./report-logic";
 import { WordPropsService } from "./wordprops";
 import { DedupeService, normalizeDedupeSettings } from "./dedupe/service";
-import { L } from "./i18n";
+import { L, isZh } from "./i18n";
 import { linkText, rewriteLinks } from "./checkup-logic";
+import { buildWidgetSnapshot, serializeSnapshot, snapshotFingerprint } from "./widget-snapshot";
 import { DeviceLog, emptyDeviceLog, isDeviceId, mergeDeviceLog, newDeviceId, normalizeDeviceLog } from "./devices";
 
 interface SavedData {
@@ -55,6 +56,10 @@ interface CacheFile {
 
 const CACHE_FILE = "cache.json";
 const DEVICES_DIR = "devices";
+/** 小组件快照，和 data.json 放在同一个插件目录里 */
+const WIDGET_FILE = "widget-snapshot.json";
+/** 打开“导出小组件数据”后，看板没开时每隔多久看一次：库有变化就重新统计，没有就只按当前时间重生成 */
+const WIDGET_TICK_MS = 5 * 60_000;
 /** 设备 ID 存在本机 localStorage：不随库同步，所以每台设备各有一个 */
 const DEVICE_KEY = "note-pulse-device-id";
 const CACHE_VERSION = 1;
@@ -81,6 +86,13 @@ export default class NotePulsePlugin extends Plugin {
   private autoRefresh!: Debouncer<[], void>;
   private trackDebounced = debounce(() => this.trackDirty(), 8000, true);
   private persistDebounced = debounce(() => this.persist(), 30000, true);
+  /** 小组件快照：写盘防抖，不拖慢统计；写入按顺序排队 */
+  private widgetDebounced = debounce(() => void this.exportWidgetSnapshot(), 2000, true);
+  private widgetQueue: Promise<void> = Promise.resolve();
+  /** 磁盘上那份快照的指纹（见 snapshotFingerprint）；null 表示还没读过 */
+  private widgetFp: string | null = null;
+  /** 上次统计之后库有没有变过（看板没打开时，用它决定要不要在后台重新统计） */
+  private widgetDirty = false;
 
   async onload() {
     await this.loadAll();
@@ -184,9 +196,12 @@ export default class NotePulsePlugin extends Plugin {
       );
       // 其它设备的记录同步进来后自动更新看板：iCloud 等不会通知插件，每分钟看一眼 devices/ 有没有变
       this.registerInterval(window.setInterval(() => void this.checkDevices(), 60_000));
+      this.registerInterval(window.setInterval(() => this.widgetTick(), WIDGET_TICK_MS));
       // 启动后在后台补记一次（只会读取上次之后改动过的文件），这样看板没打开时写的字数也不会丢
       window.setTimeout(() => {
         if (this.getViews().length === 0) void this.enqueue(() => this.silentSync());
+        // 导出小组件数据时，没有看板也要有一份统计，小组件才有东西可显示
+        if (this.settings.widgetExport && !this.lastStats) void this.requestRefresh(false);
       }, 4000);
     });
   }
@@ -238,6 +253,7 @@ export default class NotePulsePlugin extends Plugin {
   }
 
   private onVaultChanged() {
+    this.widgetDirty = true;
     if (!this.settings.autoRefresh) return;
     const views = this.getViews();
     if (views.length === 0) return; // 看板未打开：下次打开再统计
@@ -317,6 +333,7 @@ export default class NotePulsePlugin extends Plugin {
       do {
         this.rerun = false;
         this.stale = false;
+        this.widgetDirty = false;
         for (const v of this.getViews()) v.showLoading(L("正在统计…", "Counting…"));
         // 先把其它设备同步过来的记录读进来
         await this.loadDevices();
@@ -327,6 +344,7 @@ export default class NotePulsePlugin extends Plugin {
         );
         this.lastStats = stats;
         this.schedulePersist();
+        this.scheduleWidgetExport();
         for (const v of this.getViews()) v.render(stats);
       } while (this.rerun);
       if (force) new Notice(L("Note Pulse：看板已刷新", "Note Pulse: dashboard refreshed"));
@@ -344,6 +362,7 @@ export default class NotePulsePlugin extends Plugin {
       const stats = await this.enqueue(() => computeStats(this.app, this.settings, this.contentCache, this.data));
       this.lastStats = stats;
       this.schedulePersist();
+      this.scheduleWidgetExport();
       new ReportPreviewModal(this.app, stats, { ...this.settings }, kind).open();
     } catch (e) {
       noticeError(e);
@@ -493,6 +512,90 @@ export default class NotePulsePlugin extends Plugin {
     this.data.dirty = this.data.cacheDirty = true;
     await this.persist();
     await this.requestRefresh(true);
+  }
+
+  /* ---------------- 小组件快照 ---------------- */
+
+  private get widgetPath(): string {
+    return normalizePath(`${this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`}/${WIDGET_FILE}`);
+  }
+
+  /** 设置页里显示的文件位置：桌面端是完整路径，否则是库内相对路径 */
+  widgetSnapshotLocation(): string {
+    const base = (this.app.vault.adapter as { getBasePath?: () => string }).getBasePath?.();
+    return base ? `${base}/${this.widgetPath}` : this.widgetPath;
+  }
+
+  /** 统计或日程变了：稍等一下再写，写之前会比对内容，没变就不碰磁盘 */
+  scheduleWidgetExport() {
+    if (!this.settings.widgetExport || !this.lastStats) return;
+    this.widgetDebounced();
+  }
+
+  private widgetTick() {
+    if (!this.settings.widgetExport || this.running) return;
+    // 看板开着时自动刷新已经在管了；这里管看板没开（或被盖住）时：库变过就重新统计，没变就只按当前时间重生成
+    if (this.widgetDirty && !this.getViews().some((v) => v.isVisible())) void this.requestRefresh(false);
+    else this.scheduleWidgetExport();
+  }
+
+  exportWidgetSnapshot(): Promise<void> {
+    this.widgetQueue = this.widgetQueue.then(() => this.writeWidgetSnapshot());
+    return this.widgetQueue;
+  }
+
+  private async writeWidgetSnapshot() {
+    const stats = this.lastStats;
+    if (!this.settings.widgetExport || !stats) return;
+    try {
+      const snap = buildWidgetSnapshot({
+        stats,
+        dailyGoal: this.settings.dailyWordGoal,
+        weeklyGoal: this.settings.weeklyWordGoal,
+        agenda: this.settings.agenda,
+        now: new Date(),
+        language: isZh() ? "zh" : "en",
+      });
+      const fp = snapshotFingerprint(snap);
+      const adapter = this.app.vault.adapter;
+      const path = this.widgetPath;
+      const exists = await adapter.exists(path);
+      if (exists && this.widgetFp === null) {
+        try {
+          this.widgetFp = snapshotFingerprint(JSON.parse(await adapter.read(path)) as unknown);
+        } catch {
+          this.widgetFp = ""; // 读不懂的旧文件：当作变了，直接覆盖
+        }
+      }
+      if (exists && fp === this.widgetFp) return;
+      await adapter.write(path, serializeSnapshot(snap));
+      this.widgetFp = fp;
+    } catch (e) {
+      console.error("[note-pulse] 写小组件快照失败", e);
+    }
+  }
+
+  /** 设置页的开关：打开就立刻写一份（没有统计就先统计一次），关掉就把文件删掉 */
+  async setWidgetExport(on: boolean) {
+    this.settings.widgetExport = on;
+    this.data.dirty = true;
+    await this.persist();
+    if (on) {
+      if (this.lastStats) void this.exportWidgetSnapshot();
+      else void this.requestRefresh(false);
+      return;
+    }
+    this.widgetDebounced.cancel();
+    this.widgetQueue = this.widgetQueue.then(async () => {
+      try {
+        this.widgetFp = null;
+        const adapter = this.app.vault.adapter;
+        if (await adapter.exists(this.widgetPath)) await adapter.remove(this.widgetPath);
+      } catch (e) {
+        console.error("[note-pulse] 删除小组件快照失败", e);
+      }
+    });
+    await this.widgetQueue;
   }
 
   /* ---------------- 持久化 ---------------- */
@@ -710,6 +813,8 @@ export default class NotePulsePlugin extends Plugin {
   async saveViewSetting() {
     this.data.dirty = true;
     await this.persist();
+    // 日历卡片的日程也存在这里：日程变了，小组件里今天的日程要跟着变
+    this.scheduleWidgetExport();
   }
 
   /** 用已有统计结果重绘看板（比如显示 / 隐藏入口卡片） */
