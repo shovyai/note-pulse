@@ -4,6 +4,7 @@ import { addDays, dayKey, isCheckinDay, startOfDay } from "./stats";
 import type { FileStat, VaultStats } from "./stats";
 import { weekdayLetter, weekdayName } from "./i18n";
 import type { LinkSuggestion } from "./checkup-logic";
+import type { DayContext } from "./moments";
 
 
 /** 本地日历周的周一 */
@@ -16,6 +17,55 @@ function sumWords(s: VaultStats, from: Date, toInclusive: Date): number {
   let n = 0;
   for (let d = new Date(from); d.getTime() <= toInclusive.getTime(); d = addDays(d, 1)) n += s.dayWords[dayKey(d)] || 0;
   return n;
+}
+
+/** 去掉任务文本中的日期 / 优先级等标记，只保留正文 */
+export function cleanTaskText(t: string): string {
+  return t
+    .replace(/[📅⏳🛫➕✅❌]\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "")
+    .replace(/\[(?:due|scheduled|start|created|completion)::[^\]]*\]/g, "")
+    .replace(/[🔺⏫🔼🔽⏬]\uFE0F?/gu, "")
+    .replace(/🔁[^📅⏳🛫➕✅❌]*/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/** 当前连续打卡天数：今天已打卡从今天往回数，今天还没打卡从昨天往回数 */
+export function currentStreak(s: VaultStats, goal: number, now: Date): number {
+  const today = startOfDay(now);
+  let current = 0;
+  let d = isCheckinDay(s, goal, dayKey(today)) ? today : addDays(today, -1);
+  for (let i = 0; i < 3650 && isCheckinDay(s, goal, dayKey(d)); i++) {
+    current++;
+    d = addDays(d, -1);
+  }
+  return current;
+}
+
+/** 页首问候和提醒用的“今天的情况”；看板和小组件快照共用 */
+export function dayContext(s: VaultStats, goal: number, weeklyGoal: number, now: Date): DayContext {
+  const h = headline(s, goal, now);
+  const today = startOfDay(now);
+  const todayKey = dayKey(today);
+  const tomorrowKey = dayKey(addDays(today, 1));
+  const streak = currentStreak(s, goal, now);
+  return {
+    now,
+    todayKey,
+    todayWords: h.todayWords,
+    goal,
+    todayDone: h.todayDone,
+    streak,
+    // 今天已打卡：连续段从今天往回数 streak 天；今天还没打卡：从昨天往回数
+    streakStart: streak > 0 ? dayKey(addDays(today, -(streak - (h.todayDone ? 1 : 0)))) : null,
+    weekWords: h.weekWords,
+    weeklyGoal,
+    weekStartKey: dayKey(weekStart(now)),
+    changePct: h.changePct,
+    overdue: s.tasks.overdue.length,
+    dueToday: s.tasks.dueSoon.filter((t) => t.due === todayKey).length,
+    dueTomorrow: s.tasks.dueSoon.filter((t) => t.due === tomorrowKey).length,
+  };
 }
 
 /* ---------------- 本周七天 ---------------- */

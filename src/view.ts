@@ -13,7 +13,6 @@ import {
   linkDensity,
   noteActivity,
   weekdayRhythm,
-  headline,
   monthWriting,
   trendModel,
   weekDays,
@@ -21,6 +20,9 @@ import {
   weeklyCheckins,
   weeklyNotes,
   weeklyWords,
+  cleanTaskText,
+  currentStreak,
+  dayContext,
 } from "./dashboard-logic";
 import { GroupStat, Hint, TaskInfo, VaultStats, addDays, dayKey, isCheckinDay, pad2, startOfDay } from "./stats";
 import { Agenda, MAX_ITEM_CHARS, addAgendaItem, itemsOn, monthGrid, removeAgendaItem, shiftMonth, toggleAgendaItem } from "./agenda";
@@ -192,7 +194,7 @@ export class DashboardView extends ItemView {
     this.registerInterval(
       window.setInterval(() => {
         if (this.renderedDay && this.renderedDay !== dayKey(Date.now()) && this.isVisible()) void this.plugin.requestRefresh(false);
-        else if (this.stats && this.greetHour >= 0 && new Date().getHours() !== this.greetHour && this.isVisible()) this.renderGreeting(this.stats, this.computeCheckin(this.stats));
+        else if (this.stats && this.greetHour >= 0 && new Date().getHours() !== this.greetHour && this.isVisible()) this.renderGreeting(this.stats);
       }, 60000)
     );
 
@@ -464,8 +466,8 @@ export class DashboardView extends ItemView {
     const ck = this.computeCheckin(stats);
     this.bodyHost = body;
     this.define("hints", body, (h) => this.renderHints(h, stats));
-    this.renderGreeting(stats, ck);
-    this.define("alerts", body, (h) => this.renderAlerts(h, stats, ck));
+    this.renderGreeting(stats);
+    this.define("alerts", body, (h) => this.renderAlerts(h, stats));
     if (this.editing && !this.narrow) this.renderEditBar(body);
     const grid = body.createDiv({ cls: "vp-grid" });
     this.gridEl = grid;
@@ -1128,12 +1130,7 @@ export class DashboardView extends ItemView {
       } else run = 0;
       if (s.dailyNotes[k] && k.startsWith(monthPrefix)) diaryMonth++;
     }
-    let current = 0;
-    let d = isActive(todayKey) ? today : addDays(today, -1);
-    for (let i = 0; i < 3650 && isActive(dayKey(d)); i++) {
-      current++;
-      d = addDays(d, -1);
-    }
+    const current = currentStreak(s, goal, today);
     const last7 = [];
     for (let i = 6; i >= 0; i--) {
       const x = addDays(today, -i);
@@ -1229,38 +1226,17 @@ export class DashboardView extends ItemView {
   /* ---------- 1. 页首：问候、本周小结、需要留意的提醒 ---------- */
 
   /** 今天的情况：问候语、提醒、庆祝都从这里取数 */
-  private dayContext(s: VaultStats, ck: Checkin): DayContext {
+  private dayContext(s: VaultStats): DayContext {
     const set = this.plugin.settings;
-    const now = new Date();
-    const h = headline(s, set.dailyWordGoal, now);
-    const today = startOfDay(now);
-    const tomorrowKey = dayKey(addDays(today, 1));
-    const active = ck.isActive(ck.todayKey);
-    return {
-      now,
-      todayKey: ck.todayKey,
-      todayWords: ck.todayWords,
-      goal: set.dailyWordGoal,
-      todayDone: active,
-      streak: ck.current,
-      // 今天已打卡：连续段从今天往回数 current 天；今天还没打卡：从昨天往回数
-      streakStart: ck.current > 0 ? dayKey(addDays(today, -(ck.current - (active ? 1 : 0)))) : null,
-      weekWords: h.weekWords,
-      weeklyGoal: set.weeklyWordGoal,
-      weekStartKey: dayKey(weekStart(now)),
-      changePct: h.changePct,
-      overdue: s.tasks.overdue.length,
-      dueToday: s.tasks.dueSoon.filter((t) => t.due === ck.todayKey).length,
-      dueTomorrow: s.tasks.dueSoon.filter((t) => t.due === tomorrowKey).length,
-    };
+    return dayContext(s, set.dailyWordGoal, set.weeklyWordGoal, new Date());
   }
 
   /** 页首左边：一句问候加今天的状态，下面一行本周小结。和右边的按钮在同一行 */
-  private renderGreeting(s: VaultStats, ck: Checkin) {
+  private renderGreeting(s: VaultStats) {
     const el = this.greetingEl;
     if (!el) return;
     el.empty();
-    const c = this.dayContext(s, ck);
+    const c = this.dayContext(s);
     this.greetHour = c.now.getHours();
     const box = el.createDiv({ cls: "vp-headline" });
     box.createDiv({ cls: "vp-headline-lead", text: greetingTitle(c, L) });
@@ -1280,8 +1256,8 @@ export class DashboardView extends ItemView {
   }
 
   /** 需要留意的事（逾期、今天或明天到期、连续打卡快断了、本周目标快到期）：醒目的色块，点一下跳到相关的卡片 */
-  private renderAlerts(parent: HTMLElement, s: VaultStats, ck: Checkin) {
-    const alerts = computeAlerts(this.dayContext(s, ck));
+  private renderAlerts(parent: HTMLElement, s: VaultStats) {
+    const alerts = computeAlerts(this.dayContext(s));
     const wrap = parent.createDiv({ cls: "vp-alerts" });
     if (alerts.length) {
       wrap.setAttr("role", "region");
@@ -1314,8 +1290,7 @@ export class DashboardView extends ItemView {
   private maybeCelebrate() {
     if (!this.stats || !this.isVisible() || this.editing || this.stats.totalNotes === 0) return;
     const set = this.plugin.settings;
-    const ck = this.computeCheckin(this.stats);
-    const found = achievements(this.dayContext(this.stats, ck), new Set(set.celebrated));
+    const found = achievements(this.dayContext(this.stats), new Set(set.celebrated));
     if (found.length === 0) return;
     set.celebrated = pruneCelebrated([...set.celebrated, ...found.map((a) => a.key)]);
     void this.plugin.saveViewSetting();
@@ -2949,17 +2924,6 @@ export class DashboardView extends ItemView {
       });
     }
   }
-}
-
-/** 去掉任务文本中的日期 / 优先级等标记，只保留正文 */
-function cleanTaskText(t: string): string {
-  return t
-    .replace(/[📅⏳🛫➕✅❌]\uFE0F?\s*\d{4}-\d{2}-\d{2}/gu, "")
-    .replace(/\[(?:due|scheduled|start|created|completion)::[^\]]*\]/g, "")
-    .replace(/[🔺⏫🔼🔽⏬]\uFE0F?/gu, "")
-    .replace(/🔁[^📅⏳🛫➕✅❌]*/gu, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
 }
 
 export function noticeError(e: unknown) {
