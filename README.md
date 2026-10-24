@@ -74,6 +74,7 @@ Reports include words written, check-in days, new notes, the longest note, commo
 | Created date fields | Frontmatter fields such as `created: 2025-01-01` used as the creation date, useful when sync resets file times |
 | Auto refresh and delay | Refresh after vault changes, and the debounce delay |
 | Open notes in new tab | Keep the dashboard open when you click a note |
+| Export widget data | Off by default. Writes today's words, check-in, the week, due tasks and today's agenda to `widget-snapshot.json` in the plugin folder, the first half of a future macOS desktop widget (see `docs/design/2026-10-24-macOS小组件方案.md`); the file holds your task and agenda text, and turning the option off deletes it |
 | Word count properties | Section **字数属性**: enable (off by default), property names, optional reading time and speeds, minimum change, idle time, skip oversized notes, include / exclude folders, batch update and remove buttons. See [Word count properties](#word-count-properties-for-bases) |
 
 ## Word count properties (for Bases)
@@ -340,6 +341,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，在一个页面里集中
 | 创建日期字段名 | frontmatter 中的 `created: 2025-01-01` 等字段优先作为创建日期，适合同步后文件时间不准的情况 |
 | 自动刷新 / 延迟 | 内容变化后自动刷新及防抖时间 |
 | 在新标签页打开笔记 | 点击看板中的笔记时是否新开标签页 |
+| 导出小组件数据 | 默认关闭。把今天的字数、打卡、本周七天、到期任务和今天的日程写进插件目录下的 `widget-snapshot.json`，给以后的 macOS 桌面小组件读（方案见 `docs/design/2026-10-24-macOS小组件方案.md`）；文件里有任务和日程的文字，关掉开关时文件会被删除 |
 | 字数属性 | 「字数属性」分组：启用开关（默认关闭）、属性名、可选阅读时长和速度、最小变化字数、停手等待时间、不写入超大笔记、包含 / 排除文件夹，以及批量更新和移除按钮。详见下面的「字数写入笔记属性」 |
 
 ### 字数写入笔记属性（配合 Bases）
