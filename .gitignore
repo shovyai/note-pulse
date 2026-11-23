@@ -21,3 +21,4 @@ scripts/preview/preview.js
 scripts/preview/dedupe.js
 scripts/preview/widgets.js
 scripts/preview/layouts.js
+scripts/preview/gallery.js

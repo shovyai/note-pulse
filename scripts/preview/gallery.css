@@ -1,0 +1,296 @@
+/* “添加卡片”面板原型的样式。只用于预览，不进插件。
+ * 面板从底部弹起，看板留在上面；预览是真实看板代码用示例数据渲染出来的，再整体缩小。 */
+body {
+  margin: 0;
+  background: var(--background-secondary, #e8e6ee);
+  color: var(--text-normal);
+  font-family: var(--font-interface, system-ui, sans-serif);
+}
+/* 面板打开时，看板底部留出空位，最后一行的卡片也能滚到面板上面。
+ * 留空放在看板的 .vp-root 上（那里才有 --vp-t-* 令牌）。打开时直接留出（看不见）；
+ * 收起时和面板同步缩回，滚在底部的人看到页面跟着面板往下落，不会一下跳动。 */
+#app > .vp-root {
+  transition: padding-bottom var(--vp-t-base) var(--vp-ease);
+}
+body.gal-open #app > .vp-root {
+  padding-bottom: min(54vh, 600px);
+  transition: none;
+}
+.gal-sheet.vp-root {
+  /* 原型新加的两个缓动令牌，等用户决定要不要进 styles.css：
+   * spring 给大面（面板），回弹约 2%，600px 高的面板多冲 10px 左右；
+   * pop 给小件（对勾），回弹约 10%，24px 的圆只多出 2px，看得出“弹”又不晃。
+   * 回弹的像素量随尺寸放大，所以大小件分开用。 */
+  --vp-ease-spring: cubic-bezier(0.32, 1.28, 0.5, 1);
+  --vp-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, calc(100vw - 24px));
+  height: min(50vh, 560px);
+  border: 1px solid var(--vp-border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--vp-page) 94%, transparent);
+  box-shadow: 0 24px 60px -12px rgba(30, 20, 60, 0.45);
+  color: var(--text-normal);
+  overflow: hidden;
+  visibility: hidden;
+  transform: translate(-50%, calc(100% + 32px));
+  /* 收起：不回弹、更短，按下“完成”就走；走完再隐藏，Tab 键不会进到看不见的面板 */
+  transition: transform var(--vp-t-base) var(--vp-ease), visibility 0s var(--vp-t-base);
+  backdrop-filter: blur(24px);
+}
+/* 弹起：带一点回弹 */
+.gal-sheet.vp-root.is-open {
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition: transform var(--vp-t-enter) var(--vp-ease-spring), visibility 0s;
+}
+.gal-top {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--vp-line);
+}
+.gal-title {
+  font-size: var(--vp-fs-15);
+  font-weight: 650;
+}
+.gal-done {
+  margin-left: auto;
+  padding: 7px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--vp-accent);
+  color: #fff;
+  font-size: var(--vp-fs-13);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--vp-t-fast) var(--vp-ease), filter var(--vp-t-fast) var(--vp-ease);
+}
+.gal-done:hover {
+  filter: brightness(1.08);
+}
+.gal-done:active {
+  transform: scale(0.96);
+}
+.gal-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.gal-nav {
+  position: relative;
+  display: flex;
+  flex: 0 0 188px;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 14px 12px;
+  border-right: 1px solid var(--vp-line);
+}
+/* 选中底色：一块，切换分类时从旧位置滑到新位置（和看板里分段控件的滑块同一时长、同一缓动） */
+.gal-nav-ind {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 10px;
+  background: var(--vp-accent-soft);
+  pointer-events: none;
+  transition: transform var(--vp-t-base) var(--vp-ease), width var(--vp-t-base) var(--vp-ease), height var(--vp-t-base) var(--vp-ease);
+}
+.gal-nav-ind.is-instant {
+  transition: none;
+}
+.gal-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-normal);
+  font: inherit;
+  font-size: var(--vp-fs-13);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--vp-t-fast) var(--vp-ease), color var(--vp-t-fast) var(--vp-ease);
+}
+.gal-nav-item:not(.is-active):hover {
+  background: var(--vp-hover);
+}
+.gal-nav-item.is-active {
+  background: var(--vp-accent-soft);
+  color: var(--vp-accent-ink);
+  font-weight: 650;
+}
+.gal-nav.has-ind .gal-nav-item.is-active {
+  background: none;
+}
+.gal-nav-count {
+  color: var(--text-muted);
+  font-size: var(--vp-fs-11);
+}
+.gal-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+}
+.gal-pane {
+  display: none;
+}
+.gal-pane.is-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 26px 28px;
+  padding-top: 22px;
+}
+.gal-tile {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* 预览依次浮起：弹起面板时（等面板先动一拍）、切换分类时。--gal-i 是在这一类里的次序 */
+.gal-pane.is-entering > .gal-tile {
+  animation: gal-rise var(--vp-t-enter) var(--vp-ease-out) both;
+  animation-delay: calc(var(--gal-delay, 0ms) + var(--gal-i, 0) * var(--vp-t-step));
+}
+/* 第一次切到某一类时预览还在渲染（约 40ms），先藏起来，渲染完再一起浮起，不会看到空框 */
+.gal-pane.is-loading > .gal-tile {
+  opacity: 0;
+  animation: none;
+}
+@keyframes gal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.gal-frame {
+  position: relative;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--vp-line-strong), 0 6px 16px -8px rgba(30, 20, 60, 0.3);
+  overflow: hidden;
+  pointer-events: none;
+  transition: transform var(--vp-t-base) var(--vp-ease-out), box-shadow var(--vp-t-base) var(--vp-ease);
+}
+/* 悬停上抬：只给有鼠标的设备，触屏点完不会一直浮着 */
+@media (hover: hover) {
+  .gal-tile:hover .gal-frame {
+    box-shadow: 0 0 0 2px var(--vp-accent), 0 14px 26px -10px rgba(30, 20, 60, 0.4);
+    transform: translateY(-3px);
+  }
+}
+.gal-tile:focus-visible .gal-frame {
+  box-shadow: 0 0 0 2px var(--vp-accent), 0 14px 26px -10px rgba(30, 20, 60, 0.4);
+  transform: translateY(-3px);
+}
+.gal-tile:focus-visible {
+  outline: none;
+}
+/* 按下：微微压下去，松手后按上面的过渡回弹到悬停位置 */
+.gal-tile:active .gal-frame {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: var(--vp-t-fast);
+}
+/* 已添加的那一档：强调框加对勾，再点一下取消添加，强调就没有了 */
+.gal-tile.is-picked .gal-frame {
+  box-shadow: 0 0 0 3px var(--vp-accent), 0 10px 24px -8px rgba(30, 20, 60, 0.4);
+}
+.gal-check {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--vp-page);
+  border-radius: 999px;
+  background: var(--vp-accent);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.4);
+  /* 取消：快速缩回淡出，不回弹 */
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease);
+}
+.gal-check svg {
+  width: 12px;
+  height: 12px;
+}
+/* 勾线：圆弹出后再从左到右描出来；取消时等圆淡出后才复位，看不到倒着擦掉 */
+.gal-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0s var(--vp-t-fast);
+}
+.gal-tile.is-picked .gal-check {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-base) var(--vp-ease-pop);
+}
+.gal-tile.is-picked .gal-check path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--vp-t-base) var(--vp-ease) var(--vp-t-fast);
+}
+.gal-cap {
+  margin-top: 10px;
+  color: var(--text-normal);
+  font-size: var(--vp-fs-13);
+  transition: color var(--vp-t-fast) var(--vp-ease);
+}
+.gal-tile.is-picked .gal-cap {
+  color: var(--vp-accent-ink);
+  font-weight: 650;
+}
+.gal-host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+/* 预览里只留卡片本身：去掉页头、提醒条、总结句，网格贴边 */
+.gal-host .vp-root {
+  background: transparent;
+}
+.gal-host .vp-shell {
+  max-width: none;
+  padding: 0;
+}
+.gal-host .vp-celebrate {
+  display: none !important;
+}
+.gal-host .vp-header,
+.gal-host .vp-body > :not(.vp-grid) {
+  display: none !important;
+}
+.gal-host .vp-body {
+  min-height: 0 !important;
+}
+/* 系统“减弱动态效果”：面板、预览、对勾、导航底色、看板留空全部直接到位。
+ * styles.css 那条规则只管 .vp-root 里面的元素，面板自己和看板的 .vp-root 本身要在这里补上；选择器叠高是为了盖过上面带状态的规则 */
+@media (prefers-reduced-motion: reduce) {
+  .gal-sheet.vp-root.vp-root.vp-root,
+  .gal-sheet.vp-root.vp-root.vp-root *,
+  body #app > .vp-root.vp-root.vp-root {
+    animation: none;
+    transition: none;
+  }
+}
