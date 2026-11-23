@@ -1,6 +1,5 @@
 import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type NotePulsePlugin from "./main";
-import { PreviewVariant, drawAddPreview } from "./add-preview";
 import { Tour, TourHost } from "./tour";
 import { GUIDE_VERSION, TourState, TourTarget, tourSteps } from "./tour-logic";
 import { CLOUD_FONT_PX, cloudExtent, cloudLayout, cloudLevels, cloudTagSize } from "./cloud";
@@ -34,7 +33,7 @@ import { DayContext, achievementText, achievements, alertText, computeAlerts, gr
 import { COLS, GAP, GridItem, ROW_H, rowsToPx } from "./grid";
 import { GestureHost, GridGesture, setPlace } from "./grid-edit";
 import { Box, HUB_CHROME, HeroDensity, KpiDensity, activityDensity, goalRingSize, overviewDensity, calendarDensity, innerW, bodyH, densityDensity, densityKey, foldersDensity, heatDensity, heroDensity, isTight, kpiDensity, rhythmDensity, trendDensity } from "./density";
-import { MERGED_FROM, SUPERSEDED, WIDGET_CATEGORIES, WidgetCategory, WidgetId, WidgetInfo, WidgetLayout, WidgetLayoutItem, addWidget, addableWidgets, coveredBy, defaultLayout, widgetInfo, limitsOf, readingOrder, removeWidget, sameLayout, tidyLayout, withItems } from "./widgets";
+import { GALLERY, GalleryCategoryId, WidgetId, WidgetLayout, WidgetLayoutItem, addWidget, defaultLayout, limitsOf, readingOrder, removeWidget, sameLayout, tidyLayout, widgetInfo, withItems } from "./widgets";
 import { MOTION, SegRect, animateHeight, countUp, drawLines, markStagger, playLayout, reducedMotion, segRect, slideSeg, snapshotRects } from "./motion";
 import {
   BarItem,
@@ -64,45 +63,60 @@ const folderName = (key: string) => (key === ROOT_FOLDER ? L("(根目录)", "(va
 /** “收起”按钮的文字；moreLink 靠它决定箭头朝上 */
 const COLLAPSE = () => L("收起", "Show less");
 const fmtSize = (bytes: number) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
-/** 卡片名字和一句说明（编辑看板、添加卡片里用） */
-const WIDGET_TEXT: Record<WidgetId, [() => string, () => string]> = {
-  hero: [() => L("今日写作", "Today"), () => L("今日字数、连续打卡、本周七天", "Today's words, streak, this week")],
-  tasks: [() => L("接下来", "Next up"), () => L("逾期和 7 天内到期的任务", "Overdue tasks and those due within 7 days")],
-  notes: [() => L("笔记", "Notes"), () => L("笔记总数和近 12 周走势", "Note count and 12-week trend")],
-  words: [() => L("总字数", "Words"), () => L("总字数和近 12 周走势", "Word count and 12-week trend")],
-  taskRate: [() => L("任务完成率", "Tasks done"), () => L("已完成任务的比例", "Share of tasks done")],
-  month: [() => L("本月写作", "This month"), () => L("本月打卡天数和日均字数", "Streak days and daily average this month")],
-  heat: [() => L("写作热力图", "Writing heatmap"), () => L("最多一年的每日写作", "Daily writing for up to a year")],
-  trend: [() => L("每周写作", "Weekly writing"), () => L("每周或每天的字数、新建笔记", "Words or new notes per week or day")],
-  tags: [() => L("常用标签", "Top tags"), () => L("标签和文件夹排行", "Tag and folder ranking")],
-  brokenLinks: [() => L("断链", "Broken links"), () => L("指向不存在笔记的链接，能唯一确定的可以一键修复", "Links to notes that don't exist; one click fixes the unambiguous ones")],
-  orphans: [() => L("孤立笔记", "Orphans"), () => L("没有任何链接进出的笔记", "Notes with no links in or out")],
-  sameName: [() => L("同名笔记", "Same name"), () => L("名字相同的笔记，链接时容易指错", "Notes sharing a name, which makes links ambiguous")],
-  emptyBig: [() => L("空笔记与超大笔记", "Empty and oversized"), () => L("没有内容的笔记，和字数异常多的笔记", "Notes with no content, and unusually long ones")],
-  unusedFiles: [() => L("未引用的附件", "Unused attachments"), () => L("没有任何笔记链接或嵌入的附件", "Attachments no note links to or embeds")],
-  dupes: [() => L("重复内容", "Duplicates"), () => L("不同笔记里重复出现的段落", "Passages repeated across notes")],
-  reports: [() => L("写作回顾", "Writing review"), () => L("周报和月报", "Weekly and monthly reports")],
-  topLinked: [() => L("最常被链接", "Most linked"), () => L("哪些笔记是你的核心", "Which notes are your hubs")],
-  rhythm: [() => L("写作节奏", "Writing rhythm"), () => L("一般星期几写", "Which weekdays you write")],
-  activity: [() => L("笔记活跃度", "Note activity"), () => L("写新的还是改旧的", "New notes or reworking old ones")],
-  taskNotes: [() => L("任务最多的笔记", "Notes with most tasks"), () => L("任务压在哪几篇", "Where tasks pile up")],
-  density: [() => L("链接密度", "Link density"), () => L("库连得紧不紧", "How connected the vault is")],
-  folders: [() => L("文件夹构成", "Folder mix"), () => L("内容都在哪些文件夹", "Where your notes live")],
-  calendar: [() => L("日历", "Calendar"), () => L("月历和每天的日程，可以自己记", "A month view with a daily agenda you can write in")],
-  trendHub: [() => L("写作趋势", "Writing trends"), () => L("一张卡里切指标（字数、新建、累计、打卡）、范围和图的样子（柱状、折线、曲线、面积）", "Switch metric, period and chart style (bar, line, curve, area) in one card")],
-  overview: [() => L("数据概览", "Overview"), () => L("笔记、总字数、任务完成率、本月写作四个数合在一张卡里", "Notes, words, tasks done and this month in one card")],
-  checkupHub: [() => L("库体检", "Vault checkup"), () => L("断链、孤立笔记、同名笔记、空笔记与超大笔记、未引用的附件、重复内容，一张卡里切换", "Broken links, orphans, same name, empty/oversized, unused attachments and duplicates in one card")],
-  structure: [() => L("笔记结构", "Vault structure"), () => L("标签、文件夹、文件夹构成、最常被链接、链接密度，一张卡里切换", "Tags, folders, folder mix, most linked and link density in one card")],
-  habits: [() => L("写作习惯", "Writing habits"), () => L("写作节奏和笔记活跃度，一张卡里切换", "Writing rhythm and note activity in one card")],
-  tasksHub: [() => L("任务", "Tasks"), () => L("到期、按文件夹、按笔记，一张卡里切换", "By due date, folder or note in one card")],
-  recent: [() => L("最近编辑", "Recently edited"), () => L("最近改动过的笔记", "The notes you edited most recently")],
-  goals: [() => L("目标进度", "Goals"), () => L("今天、本周、本月的目标进度环", "Progress rings for today, this week and this month")],
-  monthCompare: [() => L("本月对比上月", "This month vs last"), () => L("字数、新建笔记、打卡天数和上月同期对比", "Words, new notes and streak days against last month")],
-  lengths: [() => L("笔记长度分布", "Note length"), () => L("你的笔记大多是几百字还是几千字", "Whether your notes run to hundreds or thousands of words")],
+/** 添加面板的分类名 */
+const GALLERY_CAT_NAME: Record<GalleryCategoryId, () => string> = {
+  recommended: () => L("推荐", "Recommended"),
+  progress: () => L("写作进度", "Writing progress"),
+  trends: () => L("趋势与回顾", "Trends and review"),
+  tasks: () => L("任务", "Tasks"),
+  notes: () => L("笔记", "Notes"),
+  checkup: () => L("库体检", "Vault checkup"),
+};
+/** 添加面板里预览的缩放比例 */
+const GALLERY_SCALE = 0.5;
+/** 把 m 里 k 这一项还原成保存前的样子（原来没有就删掉） */
+function restoreEntry<K, V>(m: Map<K, V>, k: K, v: V | undefined) {
+  if (v === undefined) m.delete(k);
+  else m.set(k, v);
+}
+/** 卡片名字（编辑看板、添加面板里用） */
+const WIDGET_NAME: Record<WidgetId, () => string> = {
+  hero: () => L("今日写作", "Today"),
+  tasks: () => L("接下来", "Next up"),
+  notes: () => L("笔记", "Notes"),
+  words: () => L("总字数", "Words"),
+  taskRate: () => L("任务完成率", "Tasks done"),
+  month: () => L("本月写作", "This month"),
+  heat: () => L("写作热力图", "Writing heatmap"),
+  trend: () => L("每周写作", "Weekly writing"),
+  tags: () => L("常用标签", "Top tags"),
+  brokenLinks: () => L("断链", "Broken links"),
+  orphans: () => L("孤立笔记", "Orphans"),
+  sameName: () => L("同名笔记", "Same name"),
+  emptyBig: () => L("空笔记与超大笔记", "Empty and oversized"),
+  unusedFiles: () => L("未引用的附件", "Unused attachments"),
+  dupes: () => L("重复内容", "Duplicates"),
+  reports: () => L("写作回顾", "Writing review"),
+  topLinked: () => L("最常被链接", "Most linked"),
+  rhythm: () => L("写作节奏", "Writing rhythm"),
+  activity: () => L("笔记活跃度", "Note activity"),
+  taskNotes: () => L("任务最多的笔记", "Notes with most tasks"),
+  density: () => L("链接密度", "Link density"),
+  folders: () => L("文件夹构成", "Folder mix"),
+  calendar: () => L("日历", "Calendar"),
+  trendHub: () => L("写作趋势", "Writing trends"),
+  overview: () => L("数据概览", "Overview"),
+  checkupHub: () => L("库体检", "Vault checkup"),
+  structure: () => L("笔记结构", "Vault structure"),
+  habits: () => L("写作习惯", "Writing habits"),
+  tasksHub: () => L("任务", "Tasks"),
+  recent: () => L("最近编辑", "Recently edited"),
+  goals: () => L("目标进度", "Goals"),
+  monthCompare: () => L("本月对比上月", "This month vs last"),
+  lengths: () => L("笔记长度分布", "Note length"),
 };
 const trendStyleName = (v: TrendStyle) => ({ bar: L("柱状", "Bar"), line: L("折线", "Line"), curve: L("曲线", "Curve"), area: L("面积", "Area") })[v];
-const widgetName = (id: WidgetId) => WIDGET_TEXT[id][0]();
-const widgetDesc = (id: WidgetId) => WIDGET_TEXT[id][1]();
+const widgetName = (id: WidgetId) => WIDGET_NAME[id]();
 
 /** "2026-10-24" → 星期几（0 是周日） */
 const dayIndex = (key: string) => {
@@ -193,6 +207,7 @@ export class DashboardView extends ItemView {
     const root = this.contentEl;
     root.empty();
     root.addClass("vp-root");
+    this.sheetHost = null;
     if (Platform.isMobile) root.addClass("is-mobile");
     const shell = root.createDiv({ cls: "vp-shell" });
 
@@ -240,6 +255,12 @@ export class DashboardView extends ItemView {
         setIcon(this.fullscreenBtn, on ? "minimize" : "maximize");
         this.fullscreenBtn.setAttr("aria-label", on ? L("退出全屏", "Exit full screen") : L("全屏", "Full screen"));
       }
+    });
+
+    // 添加面板打开时 Esc 收起它（拖动中的 Esc 是取消拖动，不在这里处理）
+    this.registerDomEvent(root.ownerDocument, "keydown", (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || !this.addOpen || this.gesture?.active || this.tour?.active || !this.isVisible()) return;
+      this.setAddOpen(false);
     });
 
     // 编辑看板时 Cmd / Ctrl + Z 撤销
@@ -449,6 +470,7 @@ export class DashboardView extends ItemView {
     this.introElapsed = inIntro ? MOTION.introTotal - (this.introUntil - now) : 0;
     this.contentEl.setCssProps({ "--vp-intro-offset": `${this.introElapsed}ms` });
     this.keepScroll(() => this.renderNow(stats));
+    this.syncSheet();
     // 之后的局部重绘（悬停读数恢复、展开收起）不再按首次打开处理
     this.motionMode = "update";
     this.celebrateSoon();
@@ -580,10 +602,7 @@ export class DashboardView extends ItemView {
   /** 把看板调到引导这一步要的状态（进编辑、开关“添加卡片”面板） */
   private tourApply(state: TourState) {
     if (state.editing !== this.editing) this.toggleEditing();
-    if (this.editing && state.addOpen !== this.addOpen) {
-      this.addOpen = state.addOpen;
-      if (this.stats) this.render(this.stats);
-    }
+    if (this.editing && state.addOpen !== this.addOpen) this.setAddOpen(state.addOpen);
   }
 
   /** 引导这一步要高亮的界面元素；找不到返回 null */
@@ -657,8 +676,8 @@ export class DashboardView extends ItemView {
       new Notice(L("把面板放宽到 760px 以上再编辑", "Make this pane wider than 760 px to edit the dashboard"));
       return;
     }
+    this.setAddOpen(false);
     this.editing = !this.editing;
-    this.addOpen = false;
     this.undoStack = [];
     this.editBtn?.toggleClass("is-active", this.editing);
     this.editBtn?.setAttr("aria-pressed", String(this.editing));
@@ -698,6 +717,7 @@ export class DashboardView extends ItemView {
     this.plugin.settings.layout = next;
     void this.plugin.saveViewSetting();
     this.updateTidy();
+    this.syncSheet();
   }
 
   /** “整理”按钮：版面已经整齐（没有空位）就灰着 */
@@ -756,7 +776,13 @@ export class DashboardView extends ItemView {
   private revealCard(id: string) {
     const el = this.parts.get(id);
     if (!el) return;
-    el.scrollIntoView({ block: "center", behavior: this.motionOn() ? "smooth" : "auto" });
+    const behavior = this.motionOn() ? "smooth" : "auto";
+    if (this.addOpen) {
+      // 添加面板盖住了下半屏：让这张卡停在上半屏，才看得到刚加的效果
+      const sc = this.scroller();
+      const base = sc === sc.ownerDocument.scrollingElement ? 0 : sc.getBoundingClientRect().top;
+      sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - base - 110, behavior });
+    } else el.scrollIntoView({ block: "center", behavior });
     this.flagFor(el, "is-flash", 1400);
   }
 
@@ -777,7 +803,7 @@ export class DashboardView extends ItemView {
     x.addEventListener("click", () => this.applyLayout(removeWidget(this.plugin.settings.layout, id)));
   }
 
-  /** 编辑栏：恢复默认布局、添加卡片、完成；添加面板打开时列在编辑栏下面 */
+  /** 编辑栏：恢复默认布局、添加卡片、完成；添加面板从底部弹起，不在编辑栏下面 */
   private renderEditBar(parent: HTMLElement) {
     const bar = parent.createDiv({ cls: "vp-editbar", attr: { role: "toolbar", "aria-label": L("编辑看板", "Edit dashboard") } });
     bar.createDiv({ cls: "vp-editbar-hint", text: L("拖动卡片换位置（放哪是哪，不会自动补位），拖右下角调大小", "Drag a card to move it (it stays where you drop it), drag its corner to resize") });
@@ -800,141 +826,191 @@ export class DashboardView extends ItemView {
     this.tidyBtn = tidy;
     this.updateTidy();
     btn("circle-help", L("新手引导", "Guide"), () => this.startTour(true));
-    const add = btn("plus", L("添加卡片", "Add a card"), () => {
-      this.addOpen = !this.addOpen;
-      if (this.stats) this.render(this.stats);
-    });
+    const add = btn("plus", L("添加卡片", "Add a card"), () => this.setAddOpen(!this.addOpen));
     add.setAttr("aria-expanded", String(this.addOpen));
     this.addBtnEl = add;
     this.doneBtnEl = btn("check", L("完成", "Done"), () => this.toggleEditing(), true);
-    if (this.addOpen) this.renderAddPanel(parent);
   }
 
-  /** 添加面板：列出被移除的卡片，点一下加到最后一行第一个放得下的位置 */
-  /** 添加面板里缩略图按这张卡添加后会用的样式、标签页、指标、范围来画（添加后在编辑模式里可以切换） */
-  private addVariant(id: WidgetId): PreviewVariant {
-    const set = this.plugin.settings;
-    const cs = set.chartStyles;
-    switch (id) {
-      case "hero":
-        return { style: set.weekStyle };
-      case "trend":
-        return { style: cs.trend, metric: this.metric, range: String(this.range) };
-      case "trendHub":
-        return { style: cs.trend, metric: this.hubMetric, range: String(this.hubRange) };
-      case "tasks":
-        return { tab: this.taskTab };
-      case "tags":
-        return { tab: this.tagTab, style: cs.tags };
-      case "rhythm":
-        return { style: cs.rhythm };
-      case "folders":
-        return { style: cs.mix };
-      case "lengths":
-        return { style: cs.lengths };
-      case "tasksHub":
-        return { tab: this.hubTaskTab };
-      case "structure":
-        return { tab: this.structTab, style: this.structTab === "mix" ? cs.mix : cs.tags };
-      case "habits":
-        return { tab: this.habitTab, style: cs.rhythm };
-      case "checkupHub":
-        return { tab: this.checkupTab ?? "brokenLinks" };
-      default:
-        return {};
+  /** 添加面板（从底部弹起）：选中的分类 */
+  private galleryCat: GalleryCategoryId = "recommended";
+  /** 面板所在的元素：看板外壳里的常驻元素，重画看板时不会被清掉，收起只是滑走并隐藏 */
+  private sheetHost: HTMLElement | null = null;
+  private sheetTiles: { id: WidgetId; btn: HTMLElement }[] = [];
+  private sheetPanes = new Map<GalleryCategoryId, HTMLElement>();
+  private sheetNavBtns = new Map<GalleryCategoryId, HTMLElement>();
+  private sheetInd: HTMLElement | null = null;
+  private sheetRendered = new Set<GalleryCategoryId>();
+  /** 正在为添加面板渲染预览时：这张卡按它在面板里的尺寸算，不按看板上那张 */
+  private previewItem: WidgetLayoutItem | null = null;
+
+  /** 打开或收起添加面板 */
+  private setAddOpen(open: boolean) {
+    const ok = open && this.editing && !this.narrow && !!this.stats;
+    this.addOpen = ok;
+    this.addBtnEl?.setAttr("aria-expanded", String(ok));
+    if (!ok) {
+      this.contentEl.removeClass("vp-sheet-open");
+      this.sheetHost?.firstElementChild?.removeClass("is-open");
+      return;
+    }
+    this.buildSheet();
+    const panel = this.sheetHost?.firstElementChild as HTMLElement | null;
+    if (!panel) return;
+    this.contentEl.addClass("vp-sheet-open");
+    void panel.offsetWidth; // 先以收起的样子排一遍版，再加 is-open，弹起动画才会播
+    panel.addClass("is-open");
+    const pane = this.sheetPanes.get(this.galleryCat);
+    if (pane) this.riseTiles(pane, "var(--vp-t-fast)");
+  }
+
+  /** 左边按主题分的导航，右边是这一类卡片的真实预览；每张卡一个预览，点一下添加，再点取消，大小靠看板上的拖角调 */
+  private buildSheet() {
+    const shell = this.contentEl.querySelector<HTMLElement>(":scope > .vp-shell");
+    if (!shell || !this.stats) return;
+    this.sheetHost?.remove();
+    this.sheetTiles = [];
+    this.sheetPanes.clear();
+    this.sheetNavBtns.clear();
+    this.sheetRendered.clear();
+    // 放在外壳里面，才吃得到 .vp-root .vp-shell 下面的按钮、卡片内控件样式
+    const host = shell.createDiv({ cls: "vp-sheet-host" });
+    this.sheetHost = host;
+    const panel = host.createDiv({ cls: "vp-add-panel vp-sheet", attr: { role: "dialog", "aria-label": L("添加卡片", "Add cards") } });
+    const top = panel.createDiv({ cls: "vp-sheet-top" });
+    top.createDiv({ cls: "vp-sheet-title", text: L("添加卡片", "Add cards") });
+    const done = top.createEl("button", { cls: "vp-btn is-compact is-primary", text: L("完成", "Done"), attr: { type: "button" } });
+    done.addEventListener("click", () => this.setAddOpen(false));
+    const main = panel.createDiv({ cls: "vp-sheet-main" });
+    const nav = main.createEl("nav", { cls: "vp-gal-nav", attr: { "aria-label": L("卡片分类", "Card categories") } });
+    // 选中底色单独一块，放在按钮前面，切换分类时从旧位置滑到新位置
+    this.sheetInd = nav.createDiv({ cls: "vp-gal-ind", attr: { "aria-hidden": "true" } });
+    const content = main.createDiv({ cls: "vp-gal-content" });
+    for (const cat of GALLERY) {
+      const b = nav.createEl("button", { cls: "vp-gal-navitem", attr: { type: "button", "data-fid": `add:cat:${cat.id}` } });
+      b.createSpan({ text: GALLERY_CAT_NAME[cat.id]() });
+      b.createSpan({ cls: "vp-gal-count", text: String(cat.ids.length) });
+      b.addEventListener("click", () => this.activateGalleryCat(cat.id));
+      this.sheetNavBtns.set(cat.id, b);
+      this.sheetPanes.set(cat.id, content.createDiv({ cls: "vp-gal-pane" }));
+    }
+    this.activateGalleryCat(this.galleryCat, true);
+  }
+
+  private activateGalleryCat(id: GalleryCategoryId, first = false) {
+    this.galleryCat = id;
+    for (const [cid, pane] of this.sheetPanes) pane.toggleClass("is-active", cid === id);
+    for (const [cid, b] of this.sheetNavBtns) {
+      b.toggleClass("is-active", cid === id);
+      b.setAttr("aria-current", cid === id ? "page" : "false");
+    }
+    const btn = this.sheetNavBtns.get(id);
+    if (btn) this.placeSheetInd(btn, first);
+    const pane = this.sheetPanes.get(id);
+    if (!pane) return;
+    if (pane.parentElement) pane.parentElement.scrollTop = 0;
+    // 隐藏着的分类没有尺寸，卡片会按错的宽度排版：第一次切到这一类时才渲染
+    if (!this.sheetRendered.has(id)) {
+      this.sheetRendered.add(id);
+      const cat = GALLERY.find((c) => c.id === id);
+      cat?.ids.forEach((wid, i) => this.galleryTile(pane, wid, i));
+      this.syncSheet();
+    }
+    if (!first) this.riseTiles(pane, "0ms");
+  }
+
+  /** 把选中底色移到这个按钮下面；instant 时直接到位（第一次放置） */
+  private placeSheetInd(btn: HTMLElement, instant: boolean) {
+    const ind = this.sheetInd;
+    if (!ind) return;
+    ind.toggleClass("is-instant", instant);
+    ind.setCssProps({ transform: `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`, width: `${btn.offsetWidth}px`, height: `${btn.offsetHeight}px` });
+    if (instant) {
+      void ind.offsetWidth;
+      ind.removeClass("is-instant");
     }
   }
 
-  private renderAddPanel(parent: HTMLElement) {
-    const panel = parent.createDiv({ cls: "vp-card vp-add-panel" });
-    const hidden = addableWidgets(this.plugin.settings.layout);
-    // 分类跳转条：点一下滚到那一类（面板限高，一屏放不下所有类）
-    const jump = panel.createDiv({ cls: "vp-add-jump", attr: { role: "navigation" } });
-    panel.createDiv({
-      cls: "vp-add-hint",
-      text:
-        hidden.length === 0
-          ? L("所有卡片都在看板上了。点卡片右上角的 × 可以移除。", "Every card is on the dashboard. Use × on a card to remove it.")
-          : L("点一张卡片添加到最后，或者把它拖到看板上想放的位置。添加后在编辑模式里可以切换它的样式、指标和标签页。灰色的是已经在看板上的，点一下可以找到它。", "Click a card to add it at the end, or drag it onto the dashboard where you want it. Once added, switch its style, metric or tab while editing. Greyed cards are already on the dashboard; click one to find it."),
+  /** 让这一类的预览依次浮起；delay 是整组推迟多久（弹起面板时等面板先动一拍） */
+  private riseTiles(pane: HTMLElement, delay: string) {
+    if (!this.motionOn()) return;
+    pane.removeClass("is-entering");
+    pane.setCssProps({ "--vp-gal-delay": delay });
+    void pane.offsetWidth; // 去掉再加回类名之间强制排版一次，动画才会重新播放
+    pane.addClass("is-entering");
+  }
+
+  /** 已在看板上的卡（不管后来拖成多大）强调出来 */
+  private syncSheet() {
+    if (this.sheetTiles.length === 0) return;
+    const on = new Set(this.plugin.settings.layout.items.map((i) => i.id));
+    for (const t of this.sheetTiles) {
+      const picked = on.has(t.id);
+      t.btn.toggleClass("is-picked", picked);
+      t.btn.setAttr("aria-pressed", String(picked));
+    }
+  }
+
+  /** 添加面板里的一张卡：真实卡片的缩小预览，名字在下面。点一下添加，已在看板上的点一下取消；也可以拖到看板上想放的位置 */
+  private galleryTile(parent: HTMLElement, id: WidgetId, index: number) {
+    const stats = this.stats;
+    if (!stats) return;
+    const name = widgetName(id);
+    const btn = parent.createEl("button", { cls: "vp-gal-tile", attr: { type: "button", "data-fid": `add:${id}`, "aria-pressed": "false", "aria-label": name } });
+    btn.setCssProps({ "--vp-gal-i": String(Math.min(8, index)) }); // 浮起次序，最多错开 8 步
+    const check = btn.createSpan({ cls: "vp-gal-check", attr: { "aria-hidden": "true" } });
+    setIcon(check, "check");
+    // pathLength = 1：勾线的虚线长度按 0 到 1 算，CSS 用它把勾从左到右描出来
+    check.querySelectorAll("svg *").forEach((n) => n.setAttribute("pathLength", "1"));
+    const frame = btn.createDiv({ cls: "vp-gal-frame", attr: { "aria-hidden": "true" } });
+    // 预览的像素大小和这张卡放到看板上时一样，再整体缩小
+    const info = widgetInfo(id);
+    const cols = info?.w ?? 4;
+    const rows = info?.h ?? 4;
+    const colW = (this.gridWidth() - GAP * (COLS - 1)) / COLS;
+    const w = Math.round(cols * colW + (cols - 1) * GAP);
+    const h = rowsToPx(rows);
+    frame.setCssProps({ "--vp-gal-fw": `${Math.round(w * GALLERY_SCALE)}px`, "--vp-gal-fh": `${Math.round(h * GALLERY_SCALE)}px` });
+    const host = frame.createDiv({ cls: "vp-gal-host" });
+    host.setCssProps({ "--vp-gal-w": `${w}px`, "--vp-gal-h": `${h}px`, "--vp-gal-scale": String(GALLERY_SCALE) });
+    this.renderPreview(host, id, cols, rows, stats, this.computeCheckin(stats));
+    btn.createDiv({ cls: "vp-gal-cap", text: name });
+    this.sheetTiles.push({ id, btn });
+    btn.addEventListener("click", () => {
+      const layout = this.plugin.settings.layout;
+      if (layout.items.some((i) => i.id === id)) this.applyLayout(removeWidget(layout, id));
+      else this.applyLayout(addWidget(layout, id), { reveal: id });
     });
-    const onBoard = new Set(this.plugin.settings.layout.items.map((i) => i.id));
-    const catName: Record<WidgetCategory, [string, string]> = {
-      writing: [L("写作数据", "Writing"), L("今天、趋势、热力图、节奏、目标、回顾", "Today, trends, heatmap, rhythm, goals, reports")],
-      tasks: [L("任务与日程", "Tasks and schedule"), L("待办、完成率、日历", "Open tasks, completion rate, calendar")],
-      structure: [L("标签、文件夹与链接", "Tags, folders and links"), L("标签排行、文件夹构成、被链接最多的笔记、最近编辑", "Tag ranking, folder mix, most linked notes, recent edits")],
-      checkup: [L("库体检", "Vault checkup"), L("断链、孤立笔记、同名、空与超大、未引用的附件、重复内容", "Broken links, orphans, same names, empty and huge notes, unused files, duplicates")],
-    };
-    for (const cat of WIDGET_CATEGORIES) {
-      // 已经在看板上的也列出来（灰色），这样看得出加过哪些；被别的卡完整包含而不再单列的（每周写作）只有在看板上时才列
-      const inCat = cat.ids.filter((id) => onBoard.has(id) || !SUPERSEDED.includes(id)).map((id) => widgetInfo(id)).filter((h): h is WidgetInfo => !!h);
-      if (inCat.length === 0) continue;
-      const addable = inCat.filter((w) => !onBoard.has(w.id)).length;
-      const sec = panel.createDiv({ cls: "vp-add-sec" });
-      const chip = jump.createEl("button", { cls: "vp-add-chip", text: `${catName[cat.id][0]} ${addable}/${inCat.length}`, attr: { type: "button", "data-fid": `add:cat:${cat.id}` } });
-      chip.addEventListener("click", () => {
-        panel.scrollTo({ top: panel.scrollTop + sec.getBoundingClientRect().top - panel.getBoundingClientRect().top - jump.offsetHeight - 4, behavior: this.motionOn() ? "smooth" : "auto" });
-      });
-      const head = sec.createDiv({ cls: "vp-add-sec-head" });
-      head.createSpan({ cls: "vp-add-sec-name", text: catName[cat.id][0] });
-      head.createSpan({ cls: "vp-add-sec-desc", text: catName[cat.id][1] });
-      const list = sec.createDiv({ cls: "vp-add-list" });
-      for (const w of inCat) {
-        if (onBoard.has(w.id)) this.addedItem(list, w);
-        else this.addItem(list, w, onBoard);
-      }
-    }
-  }
-
-  /** “添加卡片”里已经在看板上的卡片：灰色，不能再添加；点一下滚到看板上的那张并闪一下 */
-  private addedItem(list: HTMLElement, w: WidgetInfo) {
-    const item = list.createDiv({ cls: "vp-add-item is-added" });
-    const main = item.createEl("button", { cls: "vp-add-main", attr: { type: "button", "data-fid": `add:${w.id}`, "aria-label": L(`${widgetName(w.id)}，已在看板上，点一下找到它`, `${widgetName(w.id)}, already on the dashboard; click to find it`) } });
-    const preview = main.createDiv({ cls: "vp-add-preview" });
-    drawAddPreview(preview, w.id, {});
-    preview.createSpan({ cls: "vp-add-badge is-added", text: L("已添加", "Added") });
-    main.createDiv({ cls: "vp-add-name", text: widgetName(w.id) });
-    main.createDiv({ cls: "vp-add-desc", text: widgetDesc(w.id) });
-    const parts = MERGED_FROM[w.id];
-    if (parts) main.createDiv({ cls: "vp-add-note", text: L(`合并了：${parts.map((p) => widgetName(p)).join("、")}`, `Combines: ${parts.map((p) => widgetName(p)).join(", ")}`) });
-    const hubs = coveredBy(w.id);
-    if (hubs.length > 0) main.createDiv({ cls: "vp-add-note", text: L(`合并卡“${hubs.map((h) => widgetName(h)).join("”“")}”里也有这张`, `Also inside the combined card ${hubs.map((h) => widgetName(h)).join(", ")}`) });
-    main.addEventListener("click", () => this.revealCard(w.id));
-  }
-
-  /** “添加卡片”里的一张卡片：缩略图、名字和说明、合并卡的标记；点击添加，或者拖到看板上 */
-  private addItem(list: HTMLElement, w: WidgetInfo, onBoard: Set<WidgetId>) {
-    const item = list.createDiv({ cls: "vp-add-item" });
-    const variant = this.addVariant(w.id);
-    const main = item.createEl("button", { cls: "vp-add-main", attr: { type: "button", "data-fid": `add:${w.id}` } });
-    const preview = main.createDiv({ cls: "vp-add-preview" });
-    drawAddPreview(preview, w.id, variant);
-    main.createDiv({ cls: "vp-add-name", text: widgetName(w.id) });
-    main.createDiv({ cls: "vp-add-desc", text: `${widgetDesc(w.id)} · ${w.w} × ${w.h}` });
-    // 合并卡：标出来，并说明它包含哪几张单独的卡片；这些卡看板上已经有的，加这张会把同样的数据再显示一遍
-    const parts = MERGED_FROM[w.id];
-    if (parts) {
-      item.addClass("is-merged");
-      preview.createSpan({ cls: "vp-add-badge", text: L("合并卡", "Combined") });
-      main.createDiv({ cls: "vp-add-note", text: L(`合并了：${parts.map((p) => widgetName(p)).join("、")}`, `Combines: ${parts.map((p) => widgetName(p)).join(", ")}`) });
-      const dup = parts.filter((p) => onBoard.has(p));
-      if (dup.length > 0) main.createDiv({ cls: "vp-add-note is-warn", text: L(`看板上已有：${dup.map((p) => widgetName(p)).join("、")}，再加会重复显示同样的数据`, `Already on the dashboard: ${dup.map((p) => widgetName(p)).join(", ")}, so the same data would show twice`) });
-    } else {
-      const hubs = coveredBy(w.id);
-      if (hubs.length > 0) main.createDiv({ cls: "vp-add-note", text: L(`合并卡“${hubs.map((h) => widgetName(h)).join("”“")}”里也有这张`, `Also inside the combined card ${hubs.map((h) => widgetName(h)).join(", ")}`) });
-      const dupHubs = hubs.filter((h) => onBoard.has(h));
-      if (dupHubs.length > 0) main.createDiv({ cls: "vp-add-note is-warn", text: L(`看板上的“${dupHubs.map((h) => widgetName(h)).join("”“")}”已经有它了`, `Already covered by ${dupHubs.map((h) => widgetName(h)).join(", ")} on the dashboard`) });
-    }
-    main.addEventListener("click", () => this.applyLayout(addWidget(this.plugin.settings.layout, w.id), { reveal: w.id }));
     // 拖到看板上想放的位置；没怎么动就是点击，由上面的 click 处理
-    main.addEventListener("pointerdown", (e) => {
-      this.gesture?.dragIn(main, { id: w.id, x: 0, y: 0, w: w.w, h: w.h }, e, () => {
-        // 不能放进看板的容器里：它是 container-type 元素，里面的 fixed 定位会相对它而不是窗口，缩略图就会偏离指针。带上 vp-root 是为了拿到设计令牌
-        const ghost = createDiv({ cls: "vp-add-ghost vp-root", attr: { "aria-hidden": "true" } });
-        drawAddPreview(ghost.createDiv({ cls: "vp-add-preview" }), w.id, variant);
-        ghost.createDiv({ cls: "vp-add-name", text: widgetName(w.id) });
+    btn.addEventListener("pointerdown", (e) => {
+      if (btn.hasClass("is-picked")) return;
+      this.gesture?.dragIn(btn, { id, x: 0, y: 0, w: cols, h: rows }, e, () => {
+        // 不能放进看板的容器里：它是 container-type 元素，里面的 fixed 定位会相对它而不是窗口，预览就会偏离指针。带上 vp-root 是为了拿到设计令牌
+        const ghost = createDiv({ cls: "vp-gal-ghost vp-root", attr: { "aria-hidden": "true" } });
+        ghost.appendChild(frame.cloneNode(true));
         return ghost;
       });
     });
+  }
+
+  /**
+   * 按某个大小把一张卡渲染进 host：用的是看板上同一套渲染代码和真实数据。
+   * 渲染完把对看板状态（区块表、渲染函数表、列表截断函数、密度记录）的改动还原，看板上同名的那张不受影响。
+   */
+  private renderPreview(host: HTMLElement, id: WidgetId, cols: number, rows: number, stats: VaultStats, ck: Checkin) {
+    const fn = this.widgetRenderer(id, stats, ck);
+    if (!fn) return;
+    const saved = { part: this.parts.get(id), renderer: this.renderers.get(id), fitter: this.fitters.get(id), density: this.densityKeys.get(id) };
+    this.previewItem = { id, x: 0, y: 0, w: cols, h: rows };
+    try {
+      this.mount(id, host, fn);
+    } finally {
+      this.previewItem = null;
+      restoreEntry(this.parts, id, saved.part);
+      restoreEntry(this.renderers, id, saved.renderer);
+      restoreEntry(this.fitters, id, saved.fitter);
+      restoreEntry(this.densityKeys, id, saved.density);
+    }
   }
 
   /** 每张卡片的渲染函数；位置和大小由 mount 挂到卡片根元素上（--vp-x / --vp-y / --vp-w / --vp-h） */
@@ -1010,6 +1086,7 @@ export class DashboardView extends ItemView {
 
   /** 这张卡片在布局里的位置和大小 */
   private itemOf(id: string): WidgetLayoutItem | null {
+    if (this.previewItem?.id === id) return this.previewItem;
     return (this.live ?? this.plugin.settings.layout.items).find((i) => i.id === id) ?? null;
   }
 
@@ -1048,7 +1125,7 @@ export class DashboardView extends ItemView {
     const prev = this.currentPart;
     this.currentPart = key;
     // 首次打开：各区块按顺序依次浮现，区块里的数字和图表跟着这个延迟开始
-    const intro = this.motionMode === "intro";
+    const intro = !this.previewItem && this.motionMode === "intro";
     const enter = intro ? Math.min(0.6, this.enterOrder / 14) : 0;
     this.enterDelay = enter * MOTION.stagger - this.introElapsed;
     const item = this.itemOf(key);
@@ -1066,7 +1143,7 @@ export class DashboardView extends ItemView {
     if (item) {
       // cardRoot 已经加过；这里兜底（万一渲染函数没用 cardRoot）
       this.placeCard(el, item);
-      if (this.editing && !this.narrow) this.editTools(el, key as WidgetId);
+      if (this.editing && !this.narrow && !this.previewItem) this.editTools(el, key as WidgetId);
       // 列表按卡片现在的高度截一遍
       this.fitters.get(key)?.();
     }
@@ -1084,7 +1161,7 @@ export class DashboardView extends ItemView {
   private enterDelay = 0;
 
   private motionOn(): boolean {
-    return this.plugin.settings.motion && !reducedMotion(this.contentEl.ownerDocument.defaultView);
+    return !this.previewItem && this.plugin.settings.motion && !reducedMotion(this.contentEl.ownerDocument.defaultView);
   }
 
   /** 给元素加一个类，过一会儿自动去掉（动效只在那一瞬间生效，之后的重绘不再重播） */

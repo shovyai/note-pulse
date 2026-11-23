@@ -64,9 +64,9 @@ export const WIDGETS: WidgetInfo[] = [
   spec("hero", 5, 12, 6, 8, 8, 6),
   spec("tasks", 3, 12, 3, 12, 4, 6),
   spec("notes", 2, 6, 2, 4, 3, 3),
-  spec("words", 2, 6, 2, 4, 3, 3),
-  spec("taskRate", 2, 6, 2, 4, 3, 3),
-  spec("month", 2, 6, 2, 4, 3, 3),
+  spec("words", 2, 6, 2, 4, 4, 3),
+  spec("taskRate", 2, 6, 2, 4, 4, 3),
+  spec("month", 2, 6, 2, 4, 4, 3),
   spec("heat", 6, 12, 4, 6, 12, 5),
   spec("trend", 5, 12, 4, 10, 8, 7),
   spec("tags", 3, 12, 3, 12, 4, 7),
@@ -87,7 +87,7 @@ export const WIDGETS: WidgetInfo[] = [
   // 合并卡：同一类的数据放进一张带标签页的卡里（新建的默认布局不放它们，在“添加卡片”里加）
   spec("trendHub", 5, 12, 5, 10, 8, 7, true),
   spec("overview", 4, 12, 3, 6, 12, 3, true),
-  spec("checkupHub", 4, 12, 4, 12, 6, 7, true),
+  spec("checkupHub", 4, 12, 4, 12, 12, 5, true),
   spec("structure", 4, 12, 4, 10, 4, 7, true),
   spec("habits", 3, 8, 4, 8, 4, 5, true),
   spec("tasksHub", 4, 12, 4, 12, 6, 7, true),
@@ -209,42 +209,33 @@ export function hiddenWidgets(layout: WidgetLayout): WidgetInfo[] {
   return WIDGETS.filter((w) => !on.has(w.id));
 }
 
+export type GalleryCategoryId = "recommended" | "progress" | "trends" | "tasks" | "notes" | "checkup";
+
 /**
- * “添加卡片”里不再单独列出的卡片：功能已经被另一张卡完整包含。
- * 每周写作是写作趋势的子集（写作趋势多了笔记总数、总字数、打卡天数三个指标），列两张只会让人分不清。
- * 看板上已有的每周写作照常显示，移除后想加回来，加写作趋势就行（默认指标和范围和它一样）。
+ * 推荐：新装用户默认会看到的卡片，按阅读顺序，12 列正好拼满、没有空位（tests/widgets.test.ts 检查）：
+ *   y0   今日写作 8×6 | 接下来 4×6
+ *   y6   本月写作 4×3 | 总字数 4×3 | 任务完成率 4×3
+ *   y9   写作热力图 12×5
+ *   y14  每周写作 8×7 | 常用标签 4×7
+ *   y21  库体检 12×5
+ *   y26  写作回顾 12×4
+ * 大小就是各张卡的默认大小（spec 里的 w、h），不管从哪一类添加都一样。
  */
-export const SUPERSEDED: WidgetId[] = ["trend"];
+export const RECOMMENDED: WidgetId[] = ["hero", "tasks", "month", "words", "taskRate", "heat", "trend", "tags", "checkupHub", "reports"];
 
-/** “添加卡片”里列出的卡片：隐藏着的，去掉被别的卡完整包含的 */
-export function addableWidgets(layout: WidgetLayout): WidgetInfo[] {
-  return hiddenWidgets(layout).filter((w) => !SUPERSEDED.includes(w.id));
-}
-
-export type WidgetCategory = "writing" | "tasks" | "structure" | "checkup";
-
-/** “添加卡片”里的分类，每类里合并卡排在最前面 */
-export const WIDGET_CATEGORIES: { id: WidgetCategory; ids: WidgetId[] }[] = [
-  { id: "writing", ids: ["trendHub", "overview", "habits", "hero", "notes", "words", "month", "heat", "trend", "rhythm", "activity", "lengths", "monthCompare", "goals", "reports"] },
-  { id: "tasks", ids: ["tasksHub", "tasks", "taskRate", "taskNotes", "calendar"] },
-  { id: "structure", ids: ["structure", "tags", "folders", "topLinked", "density", "recent"] },
+/**
+ * “添加卡片”面板里列出的卡片：推荐加五个主题分类，每张卡一个预览，用它的默认大小，大小靠拖角调。
+ * 不在这里的卡片不再出现在面板里；已经在看板上的照常显示，老布局不变。
+ * 库体检类里有一张合并卡和它包含的 6 张单卡，想合在一起或分开的用户都能选。
+ */
+export const GALLERY: { id: GalleryCategoryId; ids: WidgetId[] }[] = [
+  { id: "recommended", ids: RECOMMENDED },
+  { id: "progress", ids: ["hero", "month", "words"] },
+  { id: "trends", ids: ["heat", "trend", "reports"] },
+  { id: "tasks", ids: ["tasks", "taskRate", "calendar"] },
+  { id: "notes", ids: ["tags", "topLinked", "recent"] },
   { id: "checkup", ids: ["checkupHub", "brokenLinks", "orphans", "sameName", "emptyBig", "unusedFiles", "dupes"] },
 ];
-
-/** 合并卡：把哪几张单独的卡片放进了一张带标签页的卡里 */
-export const MERGED_FROM: Partial<Record<WidgetId, WidgetId[]>> = {
-  trendHub: ["trend"],
-  overview: ["notes", "words", "taskRate", "month"],
-  habits: ["rhythm", "activity"],
-  tasksHub: ["tasks", "taskNotes"],
-  structure: ["tags", "folders", "topLinked", "density"],
-  checkupHub: ["brokenLinks", "orphans", "sameName", "emptyBig", "unusedFiles", "dupes"],
-};
-
-/** 这张单独的卡片也包含在哪几张合并卡里 */
-export function coveredBy(id: WidgetId): WidgetId[] {
-  return (Object.keys(MERGED_FROM) as WidgetId[]).filter((m) => MERGED_FROM[m]?.includes(id));
-}
 
 export function withItems(items: GridItem[]): WidgetLayout {
   return { version: 2, items: items as WidgetLayoutItem[] };

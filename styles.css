@@ -84,9 +84,13 @@
   --vp-t-cell: 30ms;
   --vp-t-stagger: 600ms;
   --vp-t-tour: 2800ms;
+  --vp-t-none: 0s;
   --vp-t-flash: 1300ms;
   --vp-scroll-max: 296px;
   --vp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* 添加面板的回弹：spring 给大面（面板，回弹约 2%），pop 给小件（对勾，回弹约 10%）；回弹的像素量随尺寸放大，所以大小件分开用 */
+  --vp-ease-spring: cubic-bezier(0.32, 1.28, 0.5, 1);
+  --vp-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --vp-s1: 4px;
   --vp-s2: 8px;
@@ -3389,36 +3393,157 @@ body.is-mobile .vp-root :is(button, [role="button"], [role="tab"], .is-clickable
   width: 14px;
   height: 14px;
 }
-.vp-add-panel {
-  /* 面板别占满屏：看板要留在下面，才能把卡片拖上去 */
-  max-height: min(50vh, 460px);
-  margin-bottom: var(--vp-s4);
-  overflow-y: auto;
+/* 添加面板：从底部弹起，看板留在上面，添加的效果看得见。
+ * .vp-sheet-host 是外壳最后面的一条高度为 0 的粘性条，贴在可视区底边，面板从它往上长；
+ * 打开时看板底部留出和面板一样高的空，最后一行的卡片也能滚到面板上面。动画只在 .vp-motion 下播（设置里关了动效或系统减弱动态时直接到位） */
+.vp-root {
+  --vp-sheet-h: min(50vh, 560px);
 }
-.vp-add-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: var(--vp-s3);
+/* 外壳底部的内边距在面板打开时让给粘性条：粘性条自己的上边距就是给最后一行卡片留的空，
+ * 这样滚到底时粘性条的自然位置正好在可视区底边，面板的位置前后一致 */
+.vp-sheet-open .vp-shell {
+  padding-bottom: 0;
 }
-.vp-root .vp-shell .vp-add-item {
+.vp-sheet-host {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  height: 0;
+}
+.vp-sheet-open .vp-sheet-host {
+  margin-top: calc(var(--vp-sheet-h) + var(--vp-s3));
+}
+/* 收起时留空和面板同步缩回，滚在底部的人看到页面跟着面板往下落，不会一下跳动；打开时直接留出（看不见） */
+.vp-motion .vp-shell {
+  transition: padding-bottom var(--vp-t-base) var(--vp-ease);
+}
+.vp-motion .vp-sheet-host {
+  transition: margin-top var(--vp-t-base) var(--vp-ease);
+}
+.vp-motion.vp-sheet-open .vp-shell,
+.vp-motion.vp-sheet-open .vp-sheet-host {
+  transition: none;
+}
+.vp-root .vp-add-panel.vp-sheet {
+  position: absolute;
+  right: 0;
+  bottom: var(--vp-s3);
+  left: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--vp-s2);
-  padding: var(--vp-s2);
-  border: 1px solid var(--vp-line);
-  border-radius: var(--vp-r-s);
+  width: min(1180px, 100%);
+  height: var(--vp-sheet-h);
+  margin: 0 auto;
+  padding: 0;
+  border-radius: var(--vp-r-m);
   background: var(--vp-surface);
+  box-shadow: var(--vp-shadow-pop);
+  overflow: hidden;
+  visibility: hidden;
+  transform: translateY(calc(100% + var(--vp-s5)));
 }
-.vp-root .vp-shell .vp-add-item:hover,
-.vp-root .vp-shell .vp-add-item:focus-within {
-  border-color: var(--vp-accent);
+.vp-root .vp-add-panel.vp-sheet.is-open {
+  visibility: visible;
+  transform: none;
 }
-.vp-root .vp-shell .vp-add-main {
-  user-select: none;
+/* 收起：不回弹、更短；走完再隐藏，Tab 键不会进到看不见的面板。弹起：带一点回弹 */
+.vp-motion .vp-add-panel.vp-sheet {
+  transition: transform var(--vp-t-base) var(--vp-ease), visibility var(--vp-t-none) var(--vp-t-base);
+}
+.vp-motion .vp-add-panel.vp-sheet.is-open {
+  transition: transform var(--vp-t-enter) var(--vp-ease-spring), visibility var(--vp-t-none);
+}
+.vp-sheet-top {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--vp-s3) var(--vp-s5);
+  border-bottom: 1px solid var(--vp-line);
+}
+.vp-sheet-title {
+  color: var(--text-normal);
+  font-size: var(--vp-fs-15);
+  font-weight: 650;
+}
+.vp-sheet-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.vp-gal-nav {
+  position: relative;
+  display: flex;
+  flex: 0 0 188px;
   flex-direction: column;
   gap: var(--vp-s1);
-  width: 100%;
+  padding: var(--vp-s3);
+  border-right: 1px solid var(--vp-line);
+}
+/* 选中底色：一块，切换分类时从旧位置滑到新位置（和看板里分段控件的滑块同一时长、同一缓动） */
+.vp-gal-ind {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--vp-r-m);
+  background: var(--vp-accent-soft);
+  pointer-events: none;
+}
+.vp-motion .vp-gal-ind {
+  transition: transform var(--vp-t-base) var(--vp-ease), width var(--vp-t-base) var(--vp-ease), height var(--vp-t-base) var(--vp-ease);
+}
+.vp-motion .vp-gal-ind.is-instant {
+  transition: none;
+}
+.vp-root .vp-shell .vp-gal-navitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--vp-s2);
+  height: auto;
+  padding: var(--vp-s2) var(--vp-s3);
+  border: 0;
+  border-radius: var(--vp-r-m);
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--vp-fs-13);
+  text-align: left;
+  cursor: pointer;
+}
+.vp-motion .vp-gal-navitem {
+  transition: background var(--vp-t-fast) var(--vp-ease), color var(--vp-t-fast) var(--vp-ease);
+}
+.vp-root .vp-shell .vp-gal-navitem:not(.is-active):hover {
+  background: var(--vp-hover);
+}
+.vp-root .vp-shell .vp-gal-navitem.is-active {
+  color: var(--vp-accent-ink);
+  font-weight: 600;
+}
+.vp-gal-count {
+  color: var(--vp-subtle);
+  font-size: var(--vp-fs-11);
+}
+.vp-gal-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0 var(--vp-s5) var(--vp-s5);
+  overflow-y: auto;
+}
+.vp-gal-pane {
+  display: none;
+}
+.vp-gal-pane.is-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--vp-s5);
+  padding-top: var(--vp-s5);
+}
+.vp-root .vp-shell .vp-gal-tile {
+  position: relative;
+  display: block;
   height: auto;
   padding: 0;
   border: 0;
@@ -3426,191 +3551,140 @@ body.is-mobile .vp-root :is(button, [role="button"], [role="tab"], .is-clickable
   box-shadow: none;
   text-align: left;
   cursor: pointer;
+  user-select: none;
 }
-.vp-add-jump {
-  position: sticky;
-  top: calc(var(--vp-s4) * -1);
-  z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--vp-s2);
-  margin: calc(var(--vp-s4) * -1) calc(var(--vp-s4) * -1) var(--vp-s3);
-  padding: var(--vp-s3) var(--vp-s4) var(--vp-s2);
-  background: var(--vp-surface);
+/* 预览依次浮起：弹起面板时（等面板先动一拍）、切换分类时。--vp-gal-i 是在这一类里的次序 */
+.vp-motion .vp-gal-pane.is-entering > .vp-gal-tile {
+  animation: vp-gal-rise var(--vp-t-enter) var(--vp-ease-out) both;
+  animation-delay: calc(var(--vp-gal-delay, 0ms) + var(--vp-gal-i, 0) * var(--vp-t-step));
 }
-.vp-root .vp-shell .vp-add-chip {
-  height: auto;
-  padding: 2px var(--vp-s3);
-  border: 1px solid var(--vp-line);
-  border-radius: var(--vp-r-f);
-  background: var(--vp-surface);
-  box-shadow: none;
-  color: var(--vp-subtle);
-  font-size: var(--vp-fs-12);
-  cursor: pointer;
+@keyframes vp-gal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--vp-s3)) scale(0.98);
+  }
 }
-.vp-root .vp-shell .vp-add-chip:hover {
-  border-color: var(--vp-accent);
-  color: var(--text-normal);
+.vp-gal-frame {
+  position: relative;
+  width: var(--vp-gal-fw);
+  height: var(--vp-gal-fh);
+  border-radius: var(--vp-r-m);
+  box-shadow: var(--vp-shadow);
+  overflow: hidden;
+  pointer-events: none;
 }
-.vp-add-sec + .vp-add-sec {
-  margin-top: var(--vp-s5);
+.vp-motion .vp-gal-frame {
+  transition: transform var(--vp-t-base) var(--vp-ease-out), box-shadow var(--vp-t-base) var(--vp-ease);
 }
-.vp-add-sec-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--vp-s1) var(--vp-s3);
-  margin-bottom: var(--vp-s2);
-  padding-bottom: var(--vp-s1);
-  border-bottom: 1px solid var(--vp-line);
+/* 悬停上抬：只给有鼠标的设备，触屏点完不会一直浮着 */
+@media (hover: hover) {
+  .vp-gal-tile:hover .vp-gal-frame {
+    box-shadow: var(--vp-shadow-raise);
+    outline: 1px solid var(--vp-accent);
+    transform: translateY(-3px);
+  }
 }
-.vp-add-sec-name {
-  color: var(--text-normal);
-  font-size: var(--vp-fs-13);
-  font-weight: 600;
+.vp-gal-tile:focus-visible {
+  outline: none;
 }
-.vp-add-sec-desc {
-  color: var(--vp-subtle);
-  font-size: var(--vp-fs-12);
+.vp-gal-tile:focus-visible .vp-gal-frame {
+  box-shadow: var(--vp-shadow-raise);
+  outline: 2px solid var(--vp-accent);
+  transform: translateY(-3px);
 }
-/* 合并卡：缩略图左上角的标记，卡片边框带强调色 */
-.vp-add-badge {
+/* 按下：微微压下去，松手后按上面的过渡回弹到悬停位置 */
+.vp-gal-tile:active .vp-gal-frame {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: var(--vp-t-fast);
+}
+/* 已在看板上的：强调框加对勾，再点一下取消添加，强调就没有了 */
+.vp-gal-tile.is-picked .vp-gal-frame {
+  outline: 3px solid var(--vp-accent);
+}
+.vp-gal-check {
   position: absolute;
-  top: var(--vp-s1);
-  right: var(--vp-s1);
-  padding: 1px var(--vp-s2);
+  top: calc(var(--vp-s2) * -1);
+  right: calc(var(--vp-s2) * -1);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--vp-s4) + var(--vp-s2));
+  height: calc(var(--vp-s4) + var(--vp-s2));
+  border: 2px solid var(--vp-surface);
   border-radius: var(--vp-r-f);
   background: var(--vp-accent);
   color: var(--text-on-accent, #fff);
-  font-size: var(--vp-fs-11);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.4);
+}
+.vp-gal-check svg {
+  width: var(--vp-s3);
+  height: var(--vp-s3);
+  stroke-width: 3px;
+}
+.vp-gal-check svg * {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.vp-gal-tile.is-picked .vp-gal-check {
+  opacity: 1;
+  transform: none;
+}
+.vp-gal-tile.is-picked .vp-gal-check svg * {
+  stroke-dashoffset: 0;
+}
+/* 点选：圆弹出后勾线再从左到右描出来。取消：快速缩回淡出，不回弹；勾线等圆淡出后才复位，看不到倒着擦掉 */
+.vp-motion .vp-gal-check {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease);
+}
+.vp-motion .vp-gal-check svg * {
+  transition: stroke-dashoffset var(--vp-t-none) var(--vp-t-fast);
+}
+.vp-motion .vp-gal-tile.is-picked .vp-gal-check {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-base) var(--vp-ease-pop);
+}
+.vp-motion .vp-gal-tile.is-picked .vp-gal-check svg * {
+  transition: stroke-dashoffset var(--vp-t-base) var(--vp-ease) var(--vp-t-fast);
+}
+.vp-gal-cap {
+  margin-top: var(--vp-s2);
+  color: var(--text-normal);
+  font-size: var(--vp-fs-13);
+}
+.vp-gal-tile.is-picked .vp-gal-cap {
+  color: var(--vp-accent-ink);
   font-weight: 600;
 }
-.vp-root .vp-shell .vp-add-item.is-merged {
-  border-color: color-mix(in srgb, var(--vp-accent) 45%, transparent);
+.vp-gal-host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--vp-gal-w);
+  height: var(--vp-gal-h);
+  transform: scale(var(--vp-gal-scale));
+  transform-origin: 0 0;
 }
-/* 已经在看板上的：灰色，不能再添加 */
-.vp-root .vp-shell .vp-add-item.is-added {
-  border-style: dashed;
-  background: transparent;
+.vp-gal-host > .vp-card {
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
-.vp-add-item.is-added .vp-add-preview svg,
-.vp-add-item.is-added .vp-add-name,
-.vp-add-item.is-added .vp-add-desc {
-  filter: grayscale(1);
-  opacity: 0.5;
-}
-.vp-add-badge.is-added {
-  background: var(--vp-track);
-  color: var(--vp-subtle);
-}
-.vp-add-note {
-  color: var(--vp-subtle);
-  font-size: var(--vp-fs-12);
-  white-space: normal;
-}
-.vp-add-note.is-warn {
-  color: var(--vp-warning-ink);
-}
-.vp-add-hint {
-  margin-bottom: var(--vp-s3);
-  color: var(--vp-subtle);
-  font-size: var(--vp-fs-12);
-}
-/* 拖拽添加：缩略图跟着指针走 */
-.vp-add-ghost.vp-root {
+/* 拖拽添加：预览跟着指针走 */
+.vp-gal-ghost.vp-root {
   position: fixed;
   top: var(--vp-gy, 0);
   left: var(--vp-gx, 0);
   z-index: 60;
-  width: 180px;
-  padding: var(--vp-s2);
-  border: 1px solid var(--vp-accent);
-  border-radius: var(--vp-r-s);
-  background: var(--vp-surface);
-  box-shadow: var(--vp-shadow-pop);
   opacity: 0.94;
   pointer-events: none;
   transform: translate(-50%, -50%);
 }
-.vp-add-preview {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  margin-bottom: var(--vp-s1);
-  border-radius: var(--vp-r-s);
-  background: var(--vp-surface);
-  overflow: hidden;
+.vp-gal-ghost .vp-gal-frame {
+  box-shadow: var(--vp-shadow-pop);
+  outline: 2px solid var(--vp-accent);
 }
-.vp-add-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.vp-add-svg .pv-acc {
-  fill: var(--vp-accent);
-}
-.vp-add-svg .pv-rose {
-  fill: var(--vp-rose);
-}
-.vp-add-svg .pv-ok {
-  fill: var(--vp-success);
-}
-.vp-add-svg .pv-warn {
-  fill: var(--vp-warning);
-}
-.vp-add-svg .pv-dng {
-  fill: var(--vp-danger);
-}
-.vp-add-svg .pv-soft {
-  fill: var(--vp-accent-soft);
-}
-.vp-add-svg .pv-dim {
-  fill: var(--vp-line-strong);
-}
-.vp-add-svg .pv-stroke {
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.vp-add-svg .pv-s-acc {
-  stroke: var(--vp-accent);
-}
-.vp-add-svg .pv-s-warn {
-  stroke: var(--vp-warning);
-}
-.vp-add-svg .pv-s-dim {
-  stroke: var(--vp-line-strong);
-}
-.vp-add-svg .pv-ring {
-  stroke-width: 6;
-}
-.vp-add-svg .pv-r-dim {
-  stroke: var(--vp-track);
-}
-.vp-add-svg .pv-r-acc {
-  stroke: var(--vp-accent);
-}
-.vp-add-svg .pv-r-rose {
-  stroke: var(--vp-rose);
-}
-.vp-add-svg .pv-r-warn {
-  stroke: var(--vp-warning);
-}
-.vp-add-svg .pv-r-ok {
-  stroke: var(--vp-success);
-}
-.vp-add-name {
-  font-size: var(--vp-fs-13);
-  font-weight: 600;
-  color: var(--text-normal);
-}
-.vp-add-desc {
-  margin-top: 2px;
-  font-size: var(--vp-fs-12);
-  color: var(--text-muted);
-  white-space: normal;
-}
-
 /* 窄面板里卡片高度跟内容走：正文按内容撑开；列表、图表没有定死的高度，给个上限 */
 .vp-grid.is-narrow .vp-card-body,
 .vp-grid.is-narrow .vp-hero-main {

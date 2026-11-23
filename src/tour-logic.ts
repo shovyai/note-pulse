@@ -134,7 +134,10 @@ export function tourSteps(wide: boolean): TourStep[] {
     {
       id: "library",
       title: L("挑一张卡片", "Pick a card"),
-      body: L("卡片按分类列出，每张都有缩略图。带“合并卡”标记的，把几张相关的卡片合成了一张带标签页的卡片。灰色的已经在看板上，点一下能找到它。点卡片加到最后，也可以直接拖到看板上想放的位置。", "Cards are listed by category with a thumbnail each. “Combined” cards merge several related cards into one with tabs. Grey ones are already on the dashboard; click one to find it. Click a card to add it at the end, or drag it where you want it."),
+      body: L(
+        "面板从底部弹起，按主题分类，每张卡都是真实的预览。点一下添加，加好的会有强调，再点一下取消；也可以直接拖到看板上想放的位置。大小拖卡片右下角调。",
+        "The panel slides up from the bottom, sorted by topic, with a live preview of every card. Click one to add it; added cards are highlighted, and clicking again removes it. You can also drag a card where you want it, and resize it by its corner."
+      ),
       target: "addPanel",
       state: ADD,
     },
