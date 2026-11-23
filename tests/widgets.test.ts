@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { COLS, overlap } from "../src/grid";
 
-const OPTIONAL = ["trendHub", "overview", "checkupHub", "structure", "habits", "tasksHub", "recent", "goals", "monthCompare", "lengths"];
 import { GALLERY, RECOMMENDED, WIDGETS, WidgetId, addWidget, defaultLayout, hiddenWidgets, limitsOf, normalizeLayout, readingOrder, removeWidget, sameLayout, tidyLayout, widgetInfo, withItems } from "../src/widgets";
+
+/** 默认不放在看板上、在“添加卡片”里加的卡片：不在推荐里的都是 */
+const OPTIONAL: string[] = WIDGETS.map((w) => w.id).filter((id) => !RECOMMENDED.includes(id));
 
 const at = (l: { items: { id: string; x: number; y: number; w: number; h: number }[] }, id: string) => {
   const i = l.items.find((x) => x.id === id);
@@ -11,38 +13,47 @@ const at = (l: { items: { id: string; x: number; y: number; w: number; h: number
   return `${i.x},${i.y} ${i.w}x${i.h}`;
 };
 
-test("默认布局：和方案第 10 节一致，全部卡片都在看板上", () => {
+test("默认布局：就是推荐的 10 张，正好拼满 12 列、30 行，没有空位", () => {
   const d = defaultLayout();
   assert.equal(d.version, 2);
-  // 合并卡和 2.0 之后新增的卡片默认不放在看板上，在“添加卡片”里加
+  assert.equal(d.items.length, RECOMMENDED.length);
   assert.deepEqual(hiddenWidgets(d).map((w) => w.id).sort(), [...OPTIONAL].sort());
-  assert.equal(d.items.length, WIDGETS.length - OPTIONAL.length);
   const expected: Record<string, string> = {
     hero: "0,0 8x6",
     tasks: "8,0 4x6",
-    notes: "0,6 3x3",
-    words: "3,6 3x3",
-    taskRate: "6,6 3x3",
-    month: "9,6 3x3",
+    month: "0,6 4x3",
+    words: "4,6 4x3",
+    taskRate: "8,6 4x3",
     heat: "0,9 12x5",
     trend: "0,14 8x7",
     tags: "8,14 4x7",
-    calendar: "0,21 4x7",
-    rhythm: "4,21 4x4",
-    density: "4,25 4x3",
-    activity: "8,21 4x4",
-    folders: "8,25 4x3",
-    topLinked: "0,28 4x5",
-    taskNotes: "4,28 4x5",
-    brokenLinks: "8,28 4x5",
-    orphans: "0,33 4x5",
-    sameName: "4,33 4x5",
-    emptyBig: "8,33 4x5",
-    unusedFiles: "0,38 6x4",
-    dupes: "6,38 6x4",
-    reports: "0,42 12x4",
+    checkupHub: "0,21 12x5",
+    reports: "0,26 12x4",
   };
   for (const [id, pos] of Object.entries(expected)) assert.equal(at(d, id), pos, id);
+  assert.equal(Math.max(...d.items.map((i) => i.y + i.h)), 30);
+  assert.equal(d.items.reduce((n, i) => n + i.w * i.h, 0), COLS * 30, "没有空位");
+  // 和“推荐”按顺序加到空看板上得到的一样：新装用户看到的就是面板里推荐的那些
+  let l = withItems([]);
+  for (const id of RECOMMENDED) l = addWidget(l, id);
+  assert.ok(sameLayout(d, l));
+});
+
+test("老用户的布局不变：2.1.1 的默认布局（23 张）存下来后读回来原样不变，不会被换成新的默认布局", () => {
+  const old = [
+    ["hero", 0, 0, 8, 6], ["tasks", 8, 0, 4, 6], ["notes", 0, 6, 3, 3], ["words", 3, 6, 3, 3], ["taskRate", 6, 6, 3, 3], ["month", 9, 6, 3, 3],
+    ["heat", 0, 9, 12, 5], ["trend", 0, 14, 8, 7], ["tags", 8, 14, 4, 7], ["calendar", 0, 21, 4, 7], ["rhythm", 4, 21, 4, 4], ["density", 4, 25, 4, 3],
+    ["activity", 8, 21, 4, 4], ["folders", 8, 25, 4, 3], ["topLinked", 0, 28, 4, 5], ["taskNotes", 4, 28, 4, 5], ["brokenLinks", 8, 28, 4, 5],
+    ["orphans", 0, 33, 4, 5], ["sameName", 4, 33, 4, 5], ["emptyBig", 8, 33, 4, 5], ["unusedFiles", 0, 38, 6, 4], ["dupes", 6, 38, 6, 4], ["reports", 0, 42, 12, 4],
+  ].map(([id, x, y, w, h]) => ({ id, x, y, w, h }));
+  const saved = JSON.parse(JSON.stringify({ version: 2, items: old }));
+  const read = normalizeLayout(saved);
+  const byId = <T extends { id: string }>(l: T[]) => [...l].sort((a, b) => a.id.localeCompare(b.id));
+  assert.deepEqual(byId(read.items), byId(old), "每张卡的位置和大小一点没变（读回来时只是按阅读顺序排了一下）");
+  assert.ok(!sameLayout(read, defaultLayout()), "没有被换成新的默认布局");
+  // 用户自己调过的布局同理
+  const mine = { version: 2, items: [{ id: "month", x: 3, y: 2, w: 5, h: 4 }, { id: "notes", x: 0, y: 0, w: 3, h: 2 }] };
+  assert.deepEqual(byId(normalizeLayout(JSON.parse(JSON.stringify(mine))).items), byId(mine.items));
 });
 
 test("每张卡的默认大小在它自己的范围里，范围本身合理", () => {
@@ -122,18 +133,18 @@ test("迁移：不带 version 但带 size 的也按档位布局处理；隐藏�
 });
 
 test("编辑：添加用这张卡的默认大小，先填最上面第一个放得下的空位；移除后空位保持空着，整理之后才补上来", () => {
-  let l = removeWidget(defaultLayout(), "dupes");
-  assert.deepEqual(hiddenWidgets(l).map((w) => w.id).filter((id) => !OPTIONAL.includes(id)), ["dupes"]);
-  l = addWidget(l, "dupes");
-  assert.equal(at(l, "dupes"), "6,38 4x4", "放回刚空出来的位置");
-  assert.ok(sameLayout(addWidget(l, "dupes"), l), "已经在的不重复加");
+  let l = removeWidget(defaultLayout(), "taskRate");
+  assert.deepEqual(hiddenWidgets(l).map((w) => w.id).filter((id) => !OPTIONAL.includes(id)), ["taskRate"]);
+  l = addWidget(l, "taskRate");
+  assert.equal(at(l, "taskRate"), "8,6 4x3", "放回刚空出来的位置");
+  assert.ok(sameLayout(addWidget(l, "taskRate"), l), "已经在的不重复加");
   l = removeWidget(l, "reports");
   assert.equal(hiddenWidgets(l).filter((w) => !OPTIONAL.includes(w.id)).length, 1);
   l = addWidget(l, "reports");
-  assert.equal(at(l, "reports"), "0,42 12x4", "整行的卡放回它空出来的整行");
+  assert.equal(at(l, "reports"), "0,26 12x4", "整行的卡放回它空出来的整行");
   const gone = removeWidget(defaultLayout(), "hero");
-  assert.equal(at(gone, "notes"), "0,6 3x3", "移除后别的卡不动，上面留着空位");
-  assert.equal(at(tidyLayout(gone), "notes"), "0,0 3x3", "整理之后补上来");
+  assert.equal(at(gone, "month"), "0,6 4x3", "移除后别的卡不动，上面留着空位");
+  assert.equal(at(tidyLayout(gone), "month"), "0,0 4x3", "整理之后补上来");
   for (const a of gone.items) for (const b of gone.items) if (a !== b) assert.ok(!overlap(a, b));
   assert.ok(sameLayout(tidyLayout(tidyLayout(gone)), tidyLayout(gone)), "整理两次结果不变");
 });
