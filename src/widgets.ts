@@ -63,7 +63,7 @@ const spec = (id: WidgetId, minW: number, maxW: number, minH: number, maxH: numb
 export const WIDGETS: WidgetInfo[] = [
   spec("hero", 5, 12, 6, 8, 8, 6),
   spec("tasks", 3, 12, 3, 12, 4, 6),
-  spec("notes", 2, 6, 2, 4, 3, 3),
+  spec("notes", 2, 6, 2, 4, 4, 3),
   spec("words", 2, 6, 2, 4, 4, 3),
   spec("taskRate", 2, 6, 2, 4, 4, 3),
   spec("month", 2, 6, 2, 4, 4, 3),
@@ -125,19 +125,22 @@ export interface WidgetLayout {
  * 默认布局（12 列，单位是格子）：就是“添加卡片”里的“推荐”那 10 张，12 列正好拼满，没有空位，共 30 行。
  * 2.1.1 及以前的默认是 23 张、46 行；只影响新装用户和“恢复默认布局”，已经保存过布局的用户读回来的还是自己的。
  *
- *   y0   今日写作 8×6                     | 接下来 4×6
- *   y6   本月写作 4×3 | 总字数 4×3 | 任务完成率 4×3
+ *   y0   今日写作 8×6                     | 最近编辑 4×6
+ *   y6   本月写作 4×3 | 总字数 4×3 | 笔记 4×3
  *   y9   写作热力图 12×5
  *   y14  每周写作 8×7                     | 常用标签 4×7
  *   y21  库体检 12×5
  *   y26  写作回顾 12×4
+ *
+ * 默认看板是知识库的卡片，不放任务卡（接下来、任务完成率）：很多人的库里没有任务，进来先看到两张空的任务卡不合适。
+ * 要任务的人在“添加卡片”的任务类里加。
  */
 const DEFAULT_ITEMS: [WidgetId, number, number, number, number][] = [
   ["hero", 0, 0, 8, 6],
-  ["tasks", 8, 0, 4, 6],
+  ["recent", 8, 0, 4, 6],
   ["month", 0, 6, 4, 3],
   ["words", 4, 6, 4, 3],
-  ["taskRate", 8, 6, 4, 3],
+  ["notes", 8, 6, 4, 3],
   ["heat", 0, 9, 12, 5],
   ["trend", 0, 14, 8, 7],
   ["tags", 8, 14, 4, 7],
@@ -197,15 +200,15 @@ export type GalleryCategoryId = "recommended" | "progress" | "trends" | "tasks" 
 
 /**
  * 推荐：新装用户默认会看到的卡片，按阅读顺序，12 列正好拼满、没有空位（tests/widgets.test.ts 检查）：
- *   y0   今日写作 8×6 | 接下来 4×6
- *   y6   本月写作 4×3 | 总字数 4×3 | 任务完成率 4×3
+ *   y0   今日写作 8×6 | 最近编辑 4×6
+ *   y6   本月写作 4×3 | 总字数 4×3 | 笔记 4×3
  *   y9   写作热力图 12×5
  *   y14  每周写作 8×7 | 常用标签 4×7
  *   y21  库体检 12×5
  *   y26  写作回顾 12×4
  * 大小就是各张卡的默认大小（spec 里的 w、h），不管从哪一类添加都一样。
  */
-export const RECOMMENDED: WidgetId[] = ["hero", "tasks", "month", "words", "taskRate", "heat", "trend", "tags", "checkupHub", "reports"];
+export const RECOMMENDED: WidgetId[] = ["hero", "recent", "month", "words", "notes", "heat", "trend", "tags", "checkupHub", "reports"];
 
 /**
  * “添加卡片”面板里列出的卡片：推荐加五个主题分类，每张卡一个预览，用它的默认大小，大小靠拖角调。
@@ -214,7 +217,7 @@ export const RECOMMENDED: WidgetId[] = ["hero", "tasks", "month", "words", "task
  */
 export const GALLERY: { id: GalleryCategoryId; ids: WidgetId[] }[] = [
   { id: "recommended", ids: RECOMMENDED },
-  { id: "progress", ids: ["hero", "month", "words"] },
+  { id: "progress", ids: ["hero", "month", "words", "notes"] },
   { id: "trends", ids: ["heat", "trend", "reports"] },
   { id: "tasks", ids: ["tasks", "taskRate", "calendar"] },
   { id: "notes", ids: ["tags", "topLinked", "recent"] },

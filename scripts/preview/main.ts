@@ -27,6 +27,15 @@ const plugin = {
 };
 const host = document.getElementById("app") as HTMLElement;
 host.classList.add("workspace-leaf-content");
+// 默认布局候选（换掉“接下来”和“任务完成率”两张任务卡）：?default=A / B / C；不带参数就是现在的默认布局
+const CANDIDATES: Record<string, { id: string; x: number; y: number; w: number; h: number }[]> = {
+  A: [{ id: "recent", x: 8, y: 0, w: 4, h: 6 }, { id: "notes", x: 8, y: 6, w: 4, h: 3 }],
+  B: [{ id: "topLinked", x: 8, y: 0, w: 4, h: 6 }, { id: "notes", x: 8, y: 6, w: 4, h: 3 }],
+  C: [{ id: "recent", x: 8, y: 0, w: 4, h: 3 }, { id: "topLinked", x: 8, y: 3, w: 4, h: 3 }, { id: "notes", x: 8, y: 6, w: 4, h: 3 }],
+};
+const candidate = CANDIDATES[new URLSearchParams(location.search).get("default") ?? ""];
+if (candidate) settings.layout = withItems([...settings.layout.items.filter((i) => i.id !== "tasks" && i.id !== "taskRate"), ...candidate]) as WidgetLayout;
+
 const view = new DashboardView({ app, host } as never, plugin as never);
 void view.onOpen().then(() => {
   view.render(stats);

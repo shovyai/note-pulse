@@ -28,8 +28,8 @@ interface Group {
 /** 草案：19 张卡，推荐加五类；库体检类里有一张合并卡和它包含的 6 张单卡，想合在一起或分开的用户都能选。添加时用每张卡现有的默认大小 */
 /**
  * 推荐：新装用户默认看到的卡片，按阅读顺序，每张配好最合适的大小（12 列拼满，没有空位）。
- *   y0   今日写作 8×6 | 接下来 4×6
- *   y6   本月写作 4×3 | 总字数 4×3 | 任务完成率 4×3
+ *   y0   今日写作 8×6 | 最近编辑 4×6
+ *   y6   本月写作 4×3 | 总字数 4×3 | 笔记 4×3
  *   y9   写作热力图 12×5
  *   y14  每周写作 8×7 | 常用标签 4×7
  *   y21  库体检 12×5
@@ -38,10 +38,10 @@ interface Group {
  */
 const RECOMMENDED: { id: WidgetId; w: number; h: number }[] = [
   { id: "hero", w: 8, h: 6 },
-  { id: "tasks", w: 4, h: 6 },
+  { id: "recent", w: 4, h: 6 },
   { id: "month", w: 4, h: 3 },
   { id: "words", w: 4, h: 3 },
-  { id: "taskRate", w: 4, h: 3 },
+  { id: "notes", w: 4, h: 3 },
   { id: "heat", w: 12, h: 5 },
   { id: "trend", w: 8, h: 7 },
   { id: "tags", w: 4, h: 7 },
@@ -50,10 +50,10 @@ const RECOMMENDED: { id: WidgetId; w: number; h: number }[] = [
 ];
 const RECOMMENDED_NAME: Record<string, () => string> = {
   hero: () => L("今日写作", "Today"),
-  tasks: () => L("接下来", "Next up"),
+  recent: () => L("最近编辑", "Recently edited"),
   month: () => L("本月写作", "This month"),
   words: () => L("总字数", "Words"),
-  taskRate: () => L("任务完成率", "Tasks done"),
+  notes: () => L("笔记", "Notes"),
   heat: () => L("写作热力图", "Writing heatmap"),
   trend: () => L("每周写作", "Weekly writing"),
   tags: () => L("常用标签", "Top tags"),
@@ -72,6 +72,7 @@ const GROUPS: Group[] = [
       { id: "hero", name: () => L("今日写作", "Today") },
       { id: "month", name: () => L("本月写作", "This month") },
       { id: "words", name: () => L("总字数", "Words") },
+      { id: "notes", name: () => L("笔记", "Notes") },
     ],
   },
   {

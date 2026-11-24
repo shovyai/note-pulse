@@ -20,10 +20,10 @@ test("默认布局：就是推荐的 10 张，正好拼满 12 列、30 行，没
   assert.deepEqual(hiddenWidgets(d).map((w) => w.id).sort(), [...OPTIONAL].sort());
   const expected: Record<string, string> = {
     hero: "0,0 8x6",
-    tasks: "8,0 4x6",
+    recent: "8,0 4x6",
     month: "0,6 4x3",
     words: "4,6 4x3",
-    taskRate: "8,6 4x3",
+    notes: "8,6 4x3",
     heat: "0,9 12x5",
     trend: "0,14 8x7",
     tags: "8,14 4x7",
@@ -33,6 +33,9 @@ test("默认布局：就是推荐的 10 张，正好拼满 12 列、30 行，没
   for (const [id, pos] of Object.entries(expected)) assert.equal(at(d, id), pos, id);
   assert.equal(Math.max(...d.items.map((i) => i.y + i.h)), 30);
   assert.equal(d.items.reduce((n, i) => n + i.w * i.h, 0), COLS * 30, "没有空位");
+  // 新装用户的默认看板是知识库的卡片，不放任务卡（任务卡仍在“添加卡片”里）
+  assert.ok(!d.items.some((i) => i.id === "tasks" || i.id === "taskRate"), "默认布局里没有任务卡");
+  assert.deepEqual(hiddenWidgets(d).map((w) => w.id).filter((id) => id === "tasks" || id === "taskRate").sort(), ["taskRate", "tasks"]);
   // 和“推荐”按顺序加到空看板上得到的一样：新装用户看到的就是面板里推荐的那些
   let l = withItems([]);
   for (const id of RECOMMENDED) l = addWidget(l, id);
@@ -133,11 +136,11 @@ test("迁移：不带 version 但带 size 的也按档位布局处理；隐藏�
 });
 
 test("编辑：添加用这张卡的默认大小，先填最上面第一个放得下的空位；移除后空位保持空着，整理之后才补上来", () => {
-  let l = removeWidget(defaultLayout(), "taskRate");
-  assert.deepEqual(hiddenWidgets(l).map((w) => w.id).filter((id) => !OPTIONAL.includes(id)), ["taskRate"]);
-  l = addWidget(l, "taskRate");
-  assert.equal(at(l, "taskRate"), "8,6 4x3", "放回刚空出来的位置");
-  assert.ok(sameLayout(addWidget(l, "taskRate"), l), "已经在的不重复加");
+  let l = removeWidget(defaultLayout(), "notes");
+  assert.deepEqual(hiddenWidgets(l).map((w) => w.id).filter((id) => !OPTIONAL.includes(id)), ["notes"]);
+  l = addWidget(l, "notes");
+  assert.equal(at(l, "notes"), "8,6 4x3", "放回刚空出来的位置");
+  assert.ok(sameLayout(addWidget(l, "notes"), l), "已经在的不重复加");
   l = removeWidget(l, "reports");
   assert.equal(hiddenWidgets(l).filter((w) => !OPTIONAL.includes(w.id)).length, 1);
   l = addWidget(l, "reports");
@@ -166,10 +169,12 @@ test("添加面板：推荐加五类，每张卡都是真实存在的；非推�
   }
   const rest = GALLERY.filter((c) => c.id !== "recommended").flatMap((c) => c.ids);
   assert.equal(new Set(rest).size, rest.length, "一张卡只归一个主题类");
-  assert.equal(rest.length, 19);
+  assert.equal(rest.length, 20);
   for (const id of RECOMMENDED) assert.ok(rest.includes(id), `推荐里的 ${id} 也在某个主题类里`);
   const hubs = rest.filter((id) => ["trendHub", "overview", "habits", "structure", "tasksHub", "checkupHub"].includes(id));
   assert.deepEqual(hubs, ["checkupHub"]);
+  assert.ok(GALLERY.find((c) => c.id === "progress")!.ids.includes("notes"), "笔记数卡能在“进度”类里找到");
+  assert.ok(GALLERY.find((c) => c.id === "tasks")!.ids.includes("tasks") && GALLERY.find((c) => c.id === "tasks")!.ids.includes("taskRate"), "任务类里仍能加回接下来和任务完成率");
 });
 
 test("添加面板：推荐的 10 张卡按顺序加到空看板上，正好拼满 12 列、30 行，没有重叠也没有空位", () => {
@@ -177,7 +182,7 @@ test("添加面板：推荐的 10 张卡按顺序加到空看板上，正好拼�
   for (const id of RECOMMENDED) l = addWidget(l, id);
   assert.deepEqual(
     l.items.map((i) => `${i.id} ${i.x},${i.y} ${i.w}x${i.h}`),
-    ["hero 0,0 8x6", "tasks 8,0 4x6", "month 0,6 4x3", "words 4,6 4x3", "taskRate 8,6 4x3", "heat 0,9 12x5", "trend 0,14 8x7", "tags 8,14 4x7", "checkupHub 0,21 12x5", "reports 0,26 12x4"]
+    ["hero 0,0 8x6", "recent 8,0 4x6", "month 0,6 4x3", "words 4,6 4x3", "notes 8,6 4x3", "heat 0,9 12x5", "trend 0,14 8x7", "tags 8,14 4x7", "checkupHub 0,21 12x5", "reports 0,26 12x4"]
   );
   assert.equal(Math.max(...l.items.map((i) => i.y + i.h)), 30);
   assert.equal(l.items.reduce((n, i) => n + i.w * i.h, 0), COLS * 30, "没有空位");
