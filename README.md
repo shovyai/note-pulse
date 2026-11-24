@@ -25,7 +25,7 @@ The UI is in English and Chinese and follows Obsidian's language (you can pick o
 | --- | --- |
 | Headline | One sentence at the top: words written this week compared with the same days last week, your streak, today's goal and tasks due today |
 | Today's writing | Progress ring for today's words vs. your daily goal, current and longest streak, this week as dots or bars (switch on the card), weekly goal progress, and the notes you touched today |
-| Up next | Overdue tasks listed separately, then tasks due in the next 7 days; click to jump to the line. Understands `📅 YYYY-MM-DD`, `⏳` and `[due:: ]`; `- [-]` counts as cancelled |
+| Up next | Overdue tasks listed separately, then tasks due in the next 7 days; click to jump to the line. Understands `📅 YYYY-MM-DD` and `[due:: ]` as due dates (`⏳` is a scheduled date and is ignored); tasks overdue by more than 30 days are not shown as overdue; tasks in collection / clipping folders are not counted; `- [-]` counts as cancelled |
 | Stat cards | Total notes, total words, task completion rate and this month's check-in days. Hover a sparkline (or focus it and use the arrow keys) to read any of the last 12 weeks |
 | Writing heatmap | Up to a full year, sized to the view width; hover for words written and notes changed or created; click a day to list notes modified that day. Keyboard: focus it, then use the arrow keys and Enter |
 | Weekly writing | Words written (or new notes) per day over 30 days, or per week over six months or a year, with total, average and best period |
@@ -304,7 +304,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，在一个页面里集中
 | --- | --- |
 | 页首一句话 | 本周写了多少、和上周同期比、连续写作天数、今天是否达标、今天到期的任务 |
 | 今日写作 | 今日字数与每日目标的进度环、当前与最长连续打卡、本周七天（圆点或柱状，卡片上切换）、每周目标进度、今天动过的笔记 |
-| 接下来 | 已逾期的任务单独列出，下面是 7 天内到期的；点击直接跳到任务所在行。识别 `📅 YYYY-MM-DD`、`⏳`、`[due:: ]`，`- [-]` 视为已取消 |
+| 接下来 | 已逾期的任务单独列出，下面是 7 天内到期的；点击直接跳到任务所在行。识别 `📅 YYYY-MM-DD` 和 `[due:: ]` 作为截止日（`⏳` 是计划开始日，不算）；逾期超过 30 天的不再显示为已逾期；采集文件夹里的任务不计入；`- [-]` 视为已取消 |
 | 数据卡 | 笔记总数、总字数、任务完成率、本月打卡天数。鼠标停在走势线上（或聚焦后按左右方向键）可以逐周查看近 12 周的数值 |
 | 写作热力图 | 按看板宽度最多显示一整年；悬停查看当天写作字数、修改和新建笔记数；点击格子查看当天修改过的笔记；聚焦后可用方向键和回车操作 |
 | 每周写作 | 30 天按天、半年和一年按周显示写作字数（或新建笔记数），附合计、平均和最高的一段 |

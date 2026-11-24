@@ -2,6 +2,7 @@ import { App, CachedMetadata, TFile, getAllTags } from "obsidian";
 import { countWords } from "./count";
 import { DashboardSettings, normalizeFolder, splitList } from "./settings";
 import { LinkSuggestion, inFolders, sameNameGroups, suggestTarget, unusedAttachments } from "./checkup-logic";
+import { classifyDue, dueDateOf } from "./task-logic";
 
 /** 内容少于这个字数的日记（多半是空模板）不算打卡 */
 export const DAILY_MIN_WORDS = 10;
@@ -449,7 +450,6 @@ export async function computeStats(
     c30 = 0,
     m7 = 0,
     m30 = 0;
-  const soonLimit = addDays(today, 7).getTime();
   const outlierFiles: FileStat[] = [];
 
   for (const f of files) {
@@ -510,8 +510,8 @@ export async function computeStats(
     const links = cache?.links?.length || 0;
     totalLinks += links;
 
-    // 任务
-    if (cache?.listItems) {
+    // 任务（采集文件夹里的不是你写的，剪藏文章里的复选框不算待办）
+    if (cache?.listItems && !collected) {
       let nTotal = 0,
         nDone = 0,
         nPending = 0;
@@ -535,13 +535,13 @@ export async function computeStats(
         } else {
           nPending++;
           tPending++;
-          const m = /(?:📅|⏳|\[due::|due::)\s*(\d{4}-\d{2}-\d{2})/.exec(raw);
-          if (m) {
-            const dd = parseDateStr(m[1]);
+          const due = dueDateOf(raw);
+          const state = due ? classifyDue(due, today) : null;
+          if (due && (state === "overdue" || state === "soon")) {
             const text = raw.replace(TASK_LINE_RE, "$2").trim();
-            const info: TaskInfo = { file: f, line, text, status, due: m[1] };
-            if (dd && dd.getTime() < today.getTime()) overdue.push(info);
-            else if (dd && dd.getTime() <= soonLimit) dueSoon.push(info);
+            const info: TaskInfo = { file: f, line, text, status, due };
+            if (state === "overdue") overdue.push(info);
+            else dueSoon.push(info);
           }
         }
       }
