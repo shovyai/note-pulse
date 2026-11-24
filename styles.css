@@ -3358,33 +3358,148 @@ body.is-mobile .vp-root :is(button, [role="button"], [role="tab"], .is-clickable
   width: 13px;
   height: 13px;
 }
-/* 编辑栏：粘在页面顶上，拖动、滚动时一直看得到 */
-.vp-editbar {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  display: flex;
+/* 编辑工具：并入页头右侧，只在编辑时显示（根上有 .vp-editing），浏览时的状态、铅笔、全屏、刷新、设置让位。
+ * 三层：纯图标（无边框，悬停才出底色）；淡色底的“添加卡片”；实心的“完成”在最右 */
+.vp-edit-tools {
+  display: none;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--vp-s1);
+}
+.vp-editing .vp-header {
   flex-wrap: wrap;
-  gap: var(--vp-s2) var(--vp-s4);
-  margin-bottom: var(--vp-s4);
-  padding: var(--vp-s2) var(--vp-s3) var(--vp-s2) var(--vp-s4);
+  align-items: center;
+}
+.vp-editing .vp-header-actions {
+  margin-top: 0;
+  margin-left: auto;
+}
+.vp-editing .vp-header-actions > :not(.vp-edit-tools) {
+  display: none;
+}
+.vp-editing .vp-edit-tools {
+  display: flex;
+}
+.vp-edit-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--vp-s2);
+  background: var(--vp-line-strong);
+}
+.vp-root .vp-shell .vp-edit-tools .vp-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+.vp-root .vp-shell .vp-edit-tools .vp-icon-btn:hover:not(:disabled),
+.vp-root .vp-shell .vp-edit-tools .vp-icon-btn.is-open {
+  color: var(--text-normal);
+  background: color-mix(in srgb, var(--vp-accent) 9%, transparent);
+}
+.vp-edit-tools .vp-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* 两个有字的按钮和图标按钮同高（30px），排在一条水平线上 */
+.vp-root .vp-shell .vp-edit-tools .vp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px 0 11px;
+}
+.vp-root .vp-shell .vp-edit-tools .vp-btn.vp-edit-add {
+  border-color: color-mix(in srgb, var(--vp-accent) 32%, transparent);
+  background: var(--vp-accent-soft);
+  color: var(--vp-accent-ink);
+}
+.vp-root .vp-shell .vp-edit-tools .vp-btn.vp-edit-add:hover {
+  background: color-mix(in srgb, var(--vp-accent) 18%, transparent);
+}
+.vp-edit-tools .vp-btn + .vp-btn {
+  margin-left: var(--vp-s1);
+}
+/* “更多”菜单：自画的，不用系统菜单 */
+.vp-edit-more {
+  position: relative;
+}
+.vp-edit-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 168px;
+  padding: 4px;
   border: 1px solid var(--vp-border);
   border-radius: var(--vp-r-m);
   background: var(--vp-surface);
-  box-shadow: var(--vp-shadow-raise);
+  box-shadow: var(--vp-shadow-pop);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
 }
-.vp-editbar-hint {
-  font-size: var(--vp-fs-12);
-  color: var(--vp-accent-ink);
-  font-weight: 500;
+.vp-edit-menu.is-open {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
 }
-.vp-editbar-actions {
+.vp-motion .vp-edit-menu {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease), visibility var(--vp-t-none) var(--vp-t-fast);
+}
+.vp-motion .vp-edit-menu.is-open {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease), visibility var(--vp-t-none);
+}
+.vp-root .vp-shell .vp-edit-item {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--vp-s2);
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--vp-r-s);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--vp-fs-13);
+  text-align: left;
+  cursor: pointer;
+}
+.vp-edit-item svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+}
+.vp-root .vp-shell .vp-edit-item:hover,
+.vp-root .vp-shell .vp-edit-item:focus-visible {
+  background: color-mix(in srgb, var(--vp-accent) 9%, transparent);
+  outline: none;
+}
+/* 进入编辑：工具从右往左依次滑入；设置里关了动效或系统减弱动态时直接到位 */
+@keyframes vp-edit-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+.vp-motion.vp-editing .vp-edit-tools > * {
+  animation: vp-edit-in var(--vp-t-base) var(--vp-ease) backwards;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(2) {
+  animation-delay: 20ms;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(3) {
+  animation-delay: 40ms;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(4) {
+  animation-delay: 60ms;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(5) {
+  animation-delay: 80ms;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(6) {
+  animation-delay: 100ms;
+}
+.vp-motion.vp-editing .vp-edit-tools > :nth-last-child(7) {
+  animation-delay: 120ms;
 }
 .vp-btn-icon {
   display: inline-flex;
