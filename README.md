@@ -70,6 +70,7 @@ Reports include words written, check-in days, new notes, the longest note, commo
 | Exclude oversized notes (threshold) | Notes longer than this (default 20,000 words) do not count toward writing stats. The dashboard says what was excluded and has a one-click switch |
 | Daily notes folder | Notes named `YYYY-MM-DD` here count as daily notes; leave empty to search the whole vault |
 | Daily word goal | A day counts toward your streak when it reaches this many words (or has a daily note); 0 means any writing counts |
+| Task reminders, Streak reminders, Weekly goal reminders | Three switches for the colored reminder chips under the header (and for "keep your streak" in the greeting). New installs start with only task reminders on; vaults that already had settings keep all three on |
 | Heatmap mode | **Smart** (default): days since you enabled the plugin use real daily added words, recorded even while the dashboard is closed; earlier days are estimated from modified dates. **By modified date**: a note's full word count goes to the day it was last modified (rough). **By daily added words**: measured data only |
 | Created date fields | Frontmatter fields such as `created: 2025-01-01` used as the creation date, useful when sync resets file times |
 | Auto refresh and delay | Refresh after vault changes, and the debounce delay |
@@ -336,6 +337,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，在一个页面里集中
 | 排除超大笔记（阈值） | 超过该字数（默认 2 万）的笔记不计入写作统计；看板上会注明排除了哪些，并提供一键开关 |
 | 日记文件夹 | 文件名为 `YYYY-MM-DD` 的笔记视为日记；留空则在整个仓库中识别 |
 | 每日字数目标 | 当天字数达到目标即算打卡（写了日记也算）；设为 0 表示有写作就算 |
+| 任务到期提醒、连续打卡提醒、周目标提醒 | 页首色块提醒（和问候语里的“保住连续”）的三个开关。全新安装只开任务到期提醒；已经有设置的库升级后三个都保持开着 |
 | 写作热力图统计方式 | **智能**（默认）：启用插件之后按每日实际新增字数记录（看板关着也记），之前按最后修改日估算；**按修改日**：笔记全文字数计入最后修改的那天（较粗略）；**按每日新增字数**：只用实测数据 |
 | 创建日期字段名 | frontmatter 中的 `created: 2025-01-01` 等字段优先作为创建日期，适合同步后文件时间不准的情况 |
 | 自动刷新 / 延迟 | 内容变化后自动刷新及防抖时间 |

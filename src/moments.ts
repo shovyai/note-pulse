@@ -25,6 +25,10 @@ export interface DayContext {
   overdue: number;
   dueToday: number;
   dueTomorrow: number;
+  /** 三种提醒的开关（设置里）：任务逾期和到期、连续打卡快断了（含问候语里的“保住连续”）、本周目标快到期 */
+  showTaskAlerts: boolean;
+  showStreakAlerts: boolean;
+  showWeeklyAlerts: boolean;
 }
 
 export type DayPart = "dawn" | "morning" | "noon" | "afternoon" | "evening" | "night";
@@ -72,7 +76,7 @@ export function mood(c: DayContext): Mood {
   const reached = c.goal > 0 ? c.todayWords >= c.goal : c.todayWords > 0;
   if (reached || c.todayDone) return "done";
   if (part === "night") return "rest";
-  if (c.streak > 0 && (part === "evening" || part === "afternoon")) return c.goal > 0 ? "risk" : "push";
+  if (c.showStreakAlerts && c.streak > 0 && (part === "evening" || part === "afternoon")) return c.goal > 0 ? "risk" : "push";
   return c.todayWords > 0 ? "push" : "start";
 }
 
@@ -147,12 +151,12 @@ export interface Alert {
 /** 需要留意的事，按急迫程度排好：已逾期 > 今天到期 > 连续打卡快断了 > 明天到期 > 本周目标快到期 */
 export function computeAlerts(c: DayContext): Alert[] {
   const out: Alert[] = [];
-  if (c.overdue > 0) out.push({ kind: "overdue", severity: "danger", count: c.overdue });
-  if (c.dueToday > 0) out.push({ kind: "dueToday", severity: "warn", count: c.dueToday });
+  if (c.showTaskAlerts && c.overdue > 0) out.push({ kind: "overdue", severity: "danger", count: c.overdue });
+  if (c.showTaskAlerts && c.dueToday > 0) out.push({ kind: "dueToday", severity: "warn", count: c.dueToday });
   const hour = c.now.getHours();
-  if (c.streak > 0 && !c.todayDone && hour >= 18) out.push({ kind: "streak", severity: "warn", count: c.streak, extra: Math.max(0, c.goal - c.todayWords) });
-  if (c.dueTomorrow > 0) out.push({ kind: "dueTomorrow", severity: "info", count: c.dueTomorrow });
-  if (c.weeklyGoal > 0 && c.weekWords < c.weeklyGoal) {
+  if (c.showStreakAlerts && c.streak > 0 && !c.todayDone && hour >= 18) out.push({ kind: "streak", severity: "warn", count: c.streak, extra: Math.max(0, c.goal - c.todayWords) });
+  if (c.showTaskAlerts && c.dueTomorrow > 0) out.push({ kind: "dueTomorrow", severity: "info", count: c.dueTomorrow });
+  if (c.showWeeklyAlerts && c.weeklyGoal > 0 && c.weekWords < c.weeklyGoal) {
     // 周一在前：周六、周日是这一周最后两天
     const idx = (c.now.getDay() + 6) % 7;
     const daysLeft = 7 - idx;

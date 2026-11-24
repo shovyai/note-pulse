@@ -1615,6 +1615,9 @@ export class DashboardView extends ItemView {
       overdue: s.tasks.overdue.length,
       dueToday: s.tasks.dueSoon.filter((t) => t.due === ck.todayKey).length,
       dueTomorrow: s.tasks.dueSoon.filter((t) => t.due === tomorrowKey).length,
+      showTaskAlerts: set.alertTasks,
+      showStreakAlerts: set.alertStreak,
+      showWeeklyAlerts: set.alertWeekly,
     };
   }
 

@@ -63,7 +63,7 @@ export function tourSteps(wide: boolean): TourStep[] {
   const alerts: TourStep = {
     id: "alerts",
     title: L("醒目的提醒", "Reminders"),
-    body: L("任务逾期（红）、今天到期（橙）、今晚还没打卡（橙）、本周目标还差多少（紫），都做成色块放在这里。点一下，直接跳到相关的卡片。", "Overdue tasks (red), tasks due today (orange), a streak about to break (orange) and the weekly goal (purple) show up here. Click one to jump to the card."),
+    body: L("任务逾期（红）、今天到期（橙），以及你在设置里打开的连续打卡（橙）、周目标（紫）提醒，都做成色块放在这里。点一下，直接跳到相关的卡片。", "Overdue tasks (red), tasks due today (orange), and the streak (orange) and weekly goal (purple) reminders you turn on in settings show up here. Click one to jump to the card."),
     target: "alerts",
     optional: true,
     state: VIEW,

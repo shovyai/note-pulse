@@ -12,7 +12,7 @@ export type OutlierMode = "exclude" | "off";
 export type WeekStyle = "dots" | "bars" | "line";
 
 /** 设置结构版本：用于一次性迁移旧设置 */
-export const SETTINGS_VERSION = 6;
+export const SETTINGS_VERSION = 7;
 
 export interface DashboardSettings {
   settingsVersion: number;
@@ -34,6 +34,10 @@ export interface DashboardSettings {
   createdFields: string;
   dailyWordGoal: number;
   weeklyWordGoal: number;
+  /** 页首提醒色块：任务逾期和到期、连续打卡快断了、本周目标快到期，各一个开关 */
+  alertTasks: boolean;
+  alertStreak: boolean;
+  alertWeekly: boolean;
   reportFolder: string;
   /** 写作回顾卡片共享的展开状态，沿用旧周报字段。 */
   reportWeekExpanded: boolean;
@@ -90,6 +94,9 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   createdFields: "created, 创建时间, date",
   dailyWordGoal: 300,
   weeklyWordGoal: 1500,
+  alertTasks: true,
+  alertStreak: false,
+  alertWeekly: false,
   reportFolder: "Note Pulse",
   reportWeekExpanded: false,
   heatmapMode: "auto",
@@ -271,6 +278,36 @@ export class DashboardSettingTab extends PluginSettingTab {
                 await save();
               })
             ),
+          },
+          {
+            name: L("任务到期提醒", "Task reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertTasks).onChange(async (v) => {
+                  st.alertTasks = v;
+                  await save();
+                })
+              ),
+          },
+          {
+            name: L("连续打卡提醒", "Streak reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertStreak).onChange(async (v) => {
+                  st.alertStreak = v;
+                  await save();
+                })
+              ),
+          },
+          {
+            name: L("周目标提醒", "Weekly goal reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertWeekly).onChange(async (v) => {
+                  st.alertWeekly = v;
+                  await save();
+                })
+              ),
           },
           {
             name: L("写作报告保存位置", "Writing report folder"),
@@ -736,4 +773,20 @@ export function migrateLanguage(settings: DashboardSettings, _hadSettings: boole
   if (savedVersion < 5) settings.language = "auto";
   if (settings.language !== "auto" && settings.language !== "zh" && settings.language !== "en") settings.language = "auto";
   setLanguage(settings.language);
+}
+
+/**
+ * 设置版本 7 加入三种提醒的开关。已经保存过设置的老用户（版本低于 7）保持原样，三种都开；
+ * 全新安装用新默认：只开任务到期提醒。版本 7 之后用户自己的选择保留，读到非布尔值回到默认。
+ */
+export function migrateAlertSettings(settings: DashboardSettings, hadSettings: boolean, savedVersion: number): void {
+  if (hadSettings && savedVersion < 7) {
+    settings.alertTasks = true;
+    settings.alertStreak = true;
+    settings.alertWeekly = true;
+    return;
+  }
+  if (typeof settings.alertTasks !== "boolean") settings.alertTasks = DEFAULT_SETTINGS.alertTasks;
+  if (typeof settings.alertStreak !== "boolean") settings.alertStreak = DEFAULT_SETTINGS.alertStreak;
+  if (typeof settings.alertWeekly !== "boolean") settings.alertWeekly = DEFAULT_SETTINGS.alertWeekly;
 }
