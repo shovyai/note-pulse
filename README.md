@@ -57,6 +57,11 @@ Click the dashboard icon in the left ribbon, or run the command **打开看板**
 
 The first time you open the dashboard, a step-by-step guide highlights the real interface. If you saw an earlier guide, you get a short tour of what changed instead, the first time you open the dashboard in a wide pane. To replay the full guide, run **查看新手引导** (Show the guide), choose **More → Guide** in the header while editing, or use **Guide** in settings.
 
+**Appearance:** click the pencil to edit, then the palette icon (between Tidy up and More). The bottom sheet switches to **Background** and **Theme**; changes show on the dashboard right away and are saved with your settings, so they sync with the vault and apply on phones too (phones have no edit mode, so change them on a computer).
+- Background: follow the theme, Gradient, Paper, or your own colours and images (up to 8). **Add colour** opens a colour picker for that tile; **Add image** opens the system file picker, and the image is compressed (longest side 1920 px, JPEG) and copied into `Note Pulse/backgrounds/` in your vault. Hover a tile and click × to remove it from the list (the image file stays in the vault). If an image file is missing, for example not synced yet, the dashboard falls back to the theme's background.
+- Card opacity: 0–100 %. Below 100 % cards are blurred glass; on your own colours and images their colours follow the background's lightness so text stays readable.
+- Theme: Default or Craft. The accent colour always follows Obsidian.
+
 ### Writing goals and reports (1.5.0)
 
 Set **每周字数目标** (Weekly word goal) to your target; the default is 1500, and 0 turns off the goal. Today's writing shows progress for Monday through Sunday and check-ins out of seven days. Existing settings are preserved during the upgrade.
@@ -214,6 +219,10 @@ Settings and the daily word log live in `data.json`; the per-note word-count cac
 To release, run `npm version <patch|minor|major>` (updates `manifest.json` and `versions.json`), run `npm run build`, then create a GitHub release whose tag matches the version (no `v` prefix) and attach `main.js`, `manifest.json` and `styles.css`.
 
 ## Changelog
+
+### Unreleased
+
+- Appearance: a palette icon in the edit bar opens Background (follow theme, Gradient, Paper, up to 8 of your own colours and images, card opacity 0–100 %) and Theme (Default, Craft). Stored in `data.json`; existing setups look the same until you change something.
 
 ### 2.2.0
 
@@ -382,6 +391,11 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 
 **新手引导：** 第一次打开看板时，会一步一步高亮真实的界面带你看一遍。看过旧版引导的，升级后第一次在宽面板打开看板时只看一段“新增了什么”的短引导。想再看完整的：命令面板里运行「查看新手引导」，或编辑时点页头的「更多 → 新手引导」，或在设置里点「新手引导」。
 
+**外观：** 点铅笔进入编辑，再点调色盘图标（整理和更多之间），底部面板换成“背景”“主题”两类；选了立刻在看板上生效，存在设置里，随库同步，手机上同样生效（手机没有编辑入口，要在电脑上改）。
+- 背景：跟随主题、渐变、纸，或自己添加的颜色和图片（最多 8 个）。“添加颜色”会打开这一格的取色界面；“添加图片”打开系统文件选择器，图片压缩（长边 1920 像素，JPEG）后复制进库里的 `Note Pulse/backgrounds/`。悬停格子点 × 从列表里删掉（库里的图片文件保留）。图片文件不在（比如还没同步到）时看板退回主题自带的底色。
+- 卡片透明度：0–100%。低于 100% 时卡片是带模糊的半透明玻璃；在自己添加的颜色和图片上，卡片颜色跟着背景明暗变，字保持清楚。
+- 主题：默认、Craft。强调色始终跟随 Obsidian。
+
 ### 设置项
 
 | 设置 | 说明 |
@@ -481,6 +495,10 @@ views:
 - 插件只在本地读取笔记，不联网，不收集任何数据。
 
 ### 更新日志
+
+**未发布**
+
+- 外观：编辑栏的调色盘图标打开“背景”（跟随主题、渐变、纸、最多 8 个自己添加的颜色和图片、卡片透明度 0–100%）和“主题”（默认、Craft）。存在 `data.json`；已有用户不改就和原来一样。
 
 **2.2.0**
 
