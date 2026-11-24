@@ -97,7 +97,7 @@ export default class NotePulsePlugin extends Plugin {
     });
     this.addCommand({
       id: "show-guide",
-      name: L("查看 2.0 新手引导", "Show the 2.0 guide"),
+      name: L("查看新手引导", "Show the guide"),
       callback: () => void this.showGuide(),
     });
     this.addCommand({

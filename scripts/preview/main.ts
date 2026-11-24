@@ -8,7 +8,7 @@ import { WidgetLayout, withItems } from "../../src/widgets";
 
 const lang = (q.get("lang") === "en" ? "en" : "zh") as "en" | "zh";
 setLanguage(lang);
-const settings = { ...DEFAULT_SETTINGS, language: lang, dailyWordGoal: 500, weeklyWordGoal: 10000, onboarded: true, guideSeen: q.get("tour") === "1" ? "" : GUIDE_VERSION, weekStyle: (q.get("week") === "bars" ? "bars" : "dots") as "dots" | "bars" };
+const settings = { ...DEFAULT_SETTINGS, language: lang, dailyWordGoal: 500, weeklyWordGoal: 10000, onboarded: true, guideSeen: q.get("tour") === "1" ? "" : q.get("tour") === "news" ? "2.0" : GUIDE_VERSION, weekStyle: (q.get("week") === "bars" ? "bars" : "dots") as "dots" | "bars" };
 const dedupe = {
   scanning: false, stale: false, analysis: null as unknown, ignoredSet: () => new Set<string>(),
   openReport: async () => undefined, startCleanup: () => undefined,

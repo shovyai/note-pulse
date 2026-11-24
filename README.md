@@ -23,7 +23,7 @@ The UI is in English and Chinese and follows Obsidian's language (you can pick o
 
 | Panel | What it shows |
 | --- | --- |
-| Customizable workbench (2.0–2.1) | 12-column grid you arrange yourself: free placement (cards stay where you drop them; empty cells stay empty), hover-pause nudge when overlapping, Pack / 整理 to tidy upward with undo, resize, add/remove cards, keyboard, and mobile view-only stacking |
+| Customizable workbench (2.0–2.1) | 12-column grid you arrange yourself: free placement (cards stay where you drop them; empty cells stay empty), hover-pause nudge when overlapping, Tidy up (整理) in the header to move cards up, with undo, resize, add/remove cards, keyboard, and mobile view-only stacking |
 | Headline | One sentence at the top: words written this week compared with the same days last week, your streak, today's goal and tasks due today |
 | Today's writing | Progress ring for today's words vs. your daily goal, current and longest streak, this week as dots or bars (switch on the card), weekly goal progress, and the notes you touched today |
 | Up next | Overdue tasks listed separately, then tasks due in the next 7 days; click to jump to the line. Understands `📅 YYYY-MM-DD` and `[due:: ]` as due dates (`⏳` is a scheduled date and is ignored); tasks overdue by more than 30 days are not shown as overdue; tasks in collection / clipping folders are not counted; `- [-]` counts as cancelled |
@@ -53,6 +53,8 @@ Every note in the dashboard is clickable (mouse or keyboard). The dashboard refr
 ### Usage
 
 Click the dashboard icon in the left ribbon, or run the command **打开看板** (Open dashboard) from the command palette. Use **刷新看板数据** (Refresh dashboard) to recompute.
+
+The first time you open the dashboard, a step-by-step guide highlights the real interface. If you saw an earlier guide, you get a short tour of what changed instead, the first time you open the dashboard in a wide pane. To replay the full guide, run **查看新手引导** (Show the guide), choose **More → Guide** in the header while editing, or use **Guide** in settings.
 
 ### Writing goals and reports (1.5.0)
 
@@ -336,7 +338,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 
 | 区块 | 内容 |
 | --- | --- |
-| 可自定义工作台（2.0–2.1） | 12 列网格自己排：自由摆放（卡片放哪就在哪，空位保持空着）、重叠时短暂停顿才让开、编辑栏「整理」一键上浮并可撤销、调大小、增删卡片、键盘操作；手机只看不改 |
+| 可自定义工作台（2.0–2.1） | 12 列网格自己排：自由摆放（卡片放哪就在哪，空位保持空着）、重叠时短暂停顿才让开、页头「整理」一键上浮并可撤销、调大小、增删卡片、键盘操作；手机只看不改 |
 | 页首一句话 | 本周写了多少、和上周同期比、连续写作天数、今天是否达标、今天到期的任务 |
 | 今日写作 | 今日字数与每日目标的进度环、当前与最长连续打卡、本周七天（圆点或柱状，卡片上切换）、每周目标进度、今天动过的笔记 |
 | 接下来 | 已逾期的任务单独列出，下面是 7 天内到期的；点击直接跳到任务所在行。识别 `📅 YYYY-MM-DD` 和 `[due:: ]` 作为截止日（`⏳` 是计划开始日，不算）；逾期超过 30 天的不再显示为已逾期；采集文件夹里的任务不计入；`- [-]` 视为已取消 |
@@ -361,6 +363,8 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 3. 重启 Obsidian，在「设置 → 第三方插件」中启用 **Note Pulse**。
 
 **使用：** 点左侧边栏的看板图标，或在命令面板运行「打开看板」。
+
+**新手引导：** 第一次打开看板时，会一步一步高亮真实的界面带你看一遍。看过旧版引导的，升级后第一次在宽面板打开看板时只看一段“新增了什么”的短引导。想再看完整的：命令面板里运行「查看新手引导」，或编辑时点页头的「更多 → 新手引导」，或在设置里点「新手引导」。
 
 ### 设置项
 
