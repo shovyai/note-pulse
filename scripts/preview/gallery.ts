@@ -246,8 +246,8 @@ done.addEventListener("click", () => setOpen(false));
 boardHost.addEventListener(
   "click",
   (e) => {
-    const b = (e.target as Element).closest(".vp-editbar button");
-    if (b && /添加卡片|Add a card/.test(b.textContent ?? "")) {
+    const b = (e.target as Element).closest(".vp-edit-tools .vp-edit-add");
+    if (b) {
       e.stopImmediatePropagation();
       e.preventDefault();
       setOpen(!sheet.classList.contains("is-open"));

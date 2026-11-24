@@ -220,6 +220,7 @@ export class DashboardView extends ItemView {
     if (!Platform.isMobile) this.fullscreenBtn = this.iconButton(actions, "maximize", L("全屏", "Full screen"), () => this.toggleFullscreen());
     this.refreshBtn = this.iconButton(actions, "refresh-cw", L("刷新数据", "Refresh data"), () => void this.plugin.requestRefresh(true));
     this.iconButton(actions, "settings", L("看板设置", "Dashboard settings"), () => this.plugin.openSettings());
+    this.buildEditTools(header, actions);
 
     this.bodyEl = shell.createDiv({ cls: "vp-body vp-held-height" });
     // 跨过午夜后，“今天”变了，需要重新统计
@@ -234,6 +235,7 @@ export class DashboardView extends ItemView {
     this.registerDomEvent(root, "scroll", () => this.hideHelp(), { capture: true });
     this.registerDomEvent(root.ownerDocument, "pointerdown", (e: Event) => {
       if (!(e.target as HTMLElement | null)?.closest?.(".vp-help")) this.hideHelp();
+      if (this.moreOpen && !(e.target as HTMLElement | null)?.closest?.(".vp-edit-more")) this.setMoreOpen(false);
     });
 
     if (Platform.isMobile) this.installTapGuard(root);
@@ -515,7 +517,7 @@ export class DashboardView extends ItemView {
     this.define("hints", body, (h) => this.renderHints(h, stats));
     this.renderGreeting(stats, ck);
     this.define("alerts", body, (h) => this.renderAlerts(h, stats, ck));
-    if (this.editing && !this.narrow) this.renderEditBar(body);
+    this.syncEditTools();
     const grid = body.createDiv({ cls: "vp-grid" });
     this.gridEl = grid;
     grid.toggleClass("is-editing", this.editing && !this.narrow);
@@ -677,8 +679,10 @@ export class DashboardView extends ItemView {
       return;
     }
     this.setAddOpen(false);
+    this.setMoreOpen(false);
     this.editing = !this.editing;
     this.undoStack = [];
+    this.syncEditTools();
     this.editBtn?.toggleClass("is-active", this.editing);
     this.editBtn?.setAttr("aria-pressed", String(this.editing));
     if (this.stats) this.render(this.stats);
@@ -803,33 +807,91 @@ export class DashboardView extends ItemView {
     x.addEventListener("click", () => this.applyLayout(removeWidget(this.plugin.settings.layout, id)));
   }
 
-  /** 编辑栏：恢复默认布局、添加卡片、完成；添加面板从底部弹起，不在编辑栏下面 */
-  private renderEditBar(parent: HTMLElement) {
-    const bar = parent.createDiv({ cls: "vp-editbar", attr: { role: "toolbar", "aria-label": L("编辑看板", "Edit dashboard") } });
-    bar.createDiv({ cls: "vp-editbar-hint", text: L("拖动卡片换位置（放哪是哪，不会自动补位），拖右下角调大小", "Drag a card to move it (it stays where you drop it), drag its corner to resize") });
-    this.liveEl = bar.createDiv({ cls: "vp-sr-only", attr: { "aria-live": "polite", role: "status" } });
-    const acts = bar.createDiv({ cls: "vp-editbar-actions" });
-    const btn = (icon: string, text: string, fn: () => void, primary = false) => {
-      const b = acts.createEl("button", { cls: "vp-btn is-compact" + (primary ? " is-primary" : ""), attr: { type: "button" } });
-      if (icon) setIcon(b.createSpan({ cls: "vp-btn-icon", attr: { "aria-hidden": "true" } }), icon);
+  /** 编辑工具：常驻在页头右侧，只在编辑时显示（根元素带 vp-editing，浏览时的状态、铅笔、全屏、刷新、设置让位）。
+   * 三层：纯图标（撤销、整理、更多）；淡色底的“添加卡片”；实心的“完成”在最右。添加面板从底部弹起。
+   * 以后加“外观”按钮，放在纯图标那一层，整理和更多之间。 */
+  private buildEditTools(header: HTMLElement, actions: HTMLElement) {
+    // 朗读区放在页头里、工具外面：工具在浏览时是隐藏的，隐藏的元素不朗读
+    this.liveEl = header.createDiv({ cls: "vp-sr-only", attr: { "aria-live": "polite", role: "status" } });
+    const tools = actions.createDiv({ cls: "vp-edit-tools", attr: { role: "toolbar", "aria-label": L("编辑看板", "Edit dashboard") } });
+    this.undoBtn = this.iconButton(tools, "undo-2", L("撤销", "Undo"), () => this.undo()) as HTMLButtonElement;
+    this.undoBtn.disabled = true;
+    // 整理：卡片放在哪就在哪，不会自动补位；想排整齐，点这里把每张卡往上补
+    this.tidyBtn = this.iconButton(tools, "arrow-up-to-line", L("整理", "Tidy up"), () => this.applyLayout(tidyLayout(this.plugin.settings.layout))) as HTMLButtonElement;
+
+    const more = tools.createDiv({ cls: "vp-edit-more" });
+    const moreBtn = this.iconButton(more, "ellipsis", L("更多", "More"), () => this.setMoreOpen(!this.moreOpen));
+    moreBtn.setAttr("aria-haspopup", "menu");
+    moreBtn.setAttr("aria-expanded", "false");
+    this.moreBtn = moreBtn;
+    const menu = more.createDiv({ cls: "vp-edit-menu", attr: { role: "menu" } });
+    this.moreMenu = menu;
+    const item = (icon: string, text: string, fn: () => void) => {
+      const b = menu.createEl("button", { cls: "vp-edit-item", attr: { type: "button", role: "menuitem" } });
+      setIcon(b.createSpan({ attr: { "aria-hidden": "true" } }), icon);
+      b.createSpan({ text });
+      b.addEventListener("click", () => {
+        this.setMoreOpen(false);
+        fn();
+      });
+    };
+    item("rotate-ccw", L("恢复默认布局", "Restore default"), () => this.applyLayout(defaultLayout()));
+    item("circle-help", L("新手引导", "Guide"), () => this.startTour(true));
+    more.addEventListener("keydown", (e: KeyboardEvent) => this.moreKey(e));
+    more.addEventListener("focusout", (e: FocusEvent) => {
+      if (this.moreOpen && !more.contains(e.relatedTarget as Node | null)) this.setMoreOpen(false);
+    });
+
+    tools.createSpan({ cls: "vp-edit-sep", attr: { "aria-hidden": "true" } });
+    const label = (cls: string, icon: string, text: string, fn: () => void) => {
+      const b = tools.createEl("button", { cls: `vp-btn ${cls}`, attr: { type: "button" } });
+      setIcon(b.createSpan({ cls: "vp-btn-icon", attr: { "aria-hidden": "true" } }), icon);
       b.createSpan({ text });
       b.addEventListener("click", fn);
       return b;
     };
-    this.undoBtn = btn("undo-2", L("撤销", "Undo"), () => this.undo());
-    this.undoBtn.disabled = this.undoStack.length === 0;
-    this.undoBtn.setAttr("title", L("撤销（Cmd / Ctrl + Z）", "Undo (Cmd / Ctrl + Z)"));
-    btn("rotate-ccw", L("恢复默认布局", "Restore default"), () => this.applyLayout(defaultLayout()));
-    // 整理：卡片放在哪就在哪，不会自动补位；想排整齐，点这里把每张卡往上补
-    const tidy = btn("arrow-up-to-line", L("整理", "Tidy up"), () => this.applyLayout(tidyLayout(this.plugin.settings.layout)));
-    tidy.setAttr("title", L("整理：把每张卡往上补，不留空位", "Tidy up: move every card up to close the gaps"));
-    this.tidyBtn = tidy;
+    this.addBtnEl = label("vp-edit-add", "plus", L("添加卡片", "Add a card"), () => this.setAddOpen(!this.addOpen));
+    this.addBtnEl.setAttr("aria-expanded", "false");
+    this.doneBtnEl = label("is-primary", "check", L("完成", "Done"), () => this.toggleEditing());
+  }
+
+  private moreBtn: HTMLElement | null = null;
+  private moreMenu: HTMLElement | null = null;
+  private moreOpen = false;
+
+  /** “更多”菜单：自画的，不用系统菜单。打开时焦点落到第一项，收起时（用键盘关的）焦点回到按钮 */
+  private setMoreOpen(open: boolean, refocus = false) {
+    if (open === this.moreOpen || !this.moreMenu) return;
+    this.moreOpen = open;
+    this.moreMenu.toggleClass("is-open", open);
+    this.moreBtn?.toggleClass("is-open", open);
+    this.moreBtn?.setAttr("aria-expanded", String(open));
+    if (open) this.moreMenu.querySelector<HTMLElement>(".vp-edit-item")?.focus();
+    else if (refocus) this.moreBtn?.focus();
+  }
+
+  private moreKey(e: KeyboardEvent) {
+    if (!this.moreOpen) return;
+    const items = Array.from(this.moreMenu?.querySelectorAll<HTMLElement>(".vp-edit-item") ?? []);
+    const at = items.indexOf(e.target as HTMLElement);
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      this.setMoreOpen(false, true);
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(at + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]?.focus();
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      items[e.key === "Home" ? 0 : items.length - 1]?.focus();
+    }
+  }
+
+  /** 编辑工具的状态跟着数据走：显隐、撤销能不能点、整理要不要灰、添加面板开没开 */
+  private syncEditTools() {
+    this.contentEl.toggleClass("vp-editing", this.editing && !this.narrow);
+    if (this.undoBtn) this.undoBtn.disabled = this.undoStack.length === 0;
     this.updateTidy();
-    btn("circle-help", L("新手引导", "Guide"), () => this.startTour(true));
-    const add = btn("plus", L("添加卡片", "Add a card"), () => this.setAddOpen(!this.addOpen));
-    add.setAttr("aria-expanded", String(this.addOpen));
-    this.addBtnEl = add;
-    this.doneBtnEl = btn("check", L("完成", "Done"), () => this.toggleEditing(), true);
+    this.addBtnEl?.setAttr("aria-expanded", String(this.addOpen));
   }
 
   /** 添加面板（从底部弹起）：选中的分类 */
