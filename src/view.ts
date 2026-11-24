@@ -1,7 +1,7 @@
 import { ItemView, Notice, Platform, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type NotePulsePlugin from "./main";
 import { Tour, TourHost } from "./tour";
-import { GUIDE_VERSION, TourState, TourTarget, tourSteps } from "./tour-logic";
+import { GUIDE_VERSION, TourState, TourTarget, autoTourKind, tourSteps } from "./tour-logic";
 import { CLOUD_FONT_PX, cloudExtent, cloudLayout, cloudLevels, cloudTagSize } from "./cloud";
 import { ConfirmModal } from "./dedupe/modals";
 import { writingReportOverview } from "./report-logic";
@@ -558,11 +558,23 @@ export class DashboardView extends ItemView {
   private tourPending = false;
   private addBtnEl: HTMLElement | null = null;
   private doneBtnEl: HTMLElement | null = null;
+  /** 页头编辑工具里纯图标的那一层（撤销、整理、更多），引导里整组高亮 */
+  private editIconsEl: HTMLElement | null = null;
 
-  /** 升级后第一次打开看板：稍等一下让看板先浮现出来，再开始引导；看过就不再自动出现 */
+  /** 引导按电脑版讲（会进编辑模式）还是按手机、窄面板的只看版讲 */
+  private tourWide(): boolean {
+    return !this.narrow && !Platform.isMobile;
+  }
+
+  /** 这个面板打开时该自动弹哪套引导（null 是不弹）：没看过的看完整，看过旧版的在宽面板看短引导 */
+  private autoTour() {
+    return autoTourKind(this.plugin.settings.guideSeen, this.tourWide());
+  }
+
+  /** 第一次打开看板、或升级后第一次在宽面板打开：稍等一下让看板先浮现出来，再开始引导；看过就不再自动出现 */
   private maybeStartTour() {
     if (this.tourTimer || this.tour?.active) return;
-    if (this.plugin.settings.guideSeen === GUIDE_VERSION && !this.tourPending) return;
+    if (!this.autoTour() && !this.tourPending) return;
     this.tourTimer = window.setTimeout(() => {
       this.tourTimer = 0;
       if (!this.isVisible() || this.tour?.active || this.gesture?.active) return;
@@ -570,18 +582,18 @@ export class DashboardView extends ItemView {
     }, 1800);
   }
 
-  /** 开始引导；force 是用户主动要看（命令、设置、编辑栏里的按钮），不管看过没有 */
+  /** 开始引导；force 是用户主动要看（命令、设置、“更多”菜单里的按钮），不管看过没有，总是完整引导 */
   startTour(force = false) {
     if (this.tour?.active) return;
     if (!this.stats || this.stats.totalNotes === 0) {
       if (force) this.tourPending = true;
       return;
     }
-    if (!force && this.plugin.settings.guideSeen === GUIDE_VERSION) return;
+    const kind = force ? "full" : this.autoTour();
+    if (!kind) return;
     this.tourPending = false;
-    const wide = !this.narrow && !Platform.isMobile;
     this.tourRestore = { editing: this.editing, addOpen: this.addOpen };
-    this.tour = new Tour(this.tourHost(), tourSteps(wide));
+    this.tour = new Tour(this.tourHost(), tourSteps(this.tourWide(), kind));
     this.tour.start();
     // 引导层挂在 body 上、看板根元素外面：补上主题类名，才吃得到这套主题的令牌（tour.ts 由另一个任务在改，这里不动它）
     this.contentEl.ownerDocument.body.querySelector<HTMLElement>(":scope > .vp-tour")?.addClass(this.themeCls());
@@ -637,6 +649,8 @@ export class DashboardView extends ItemView {
         const ctl = this.gridEl?.querySelector<HTMLElement>(":scope > .vp-w .vp-ctl");
         return ctl?.closest<HTMLElement>(".vp-ctrls") ?? ctl ?? null;
       }
+      case "tools":
+        return this.editIconsEl;
       case "addBtn":
         return this.addBtnEl;
       case "addPanel":
@@ -823,15 +837,18 @@ export class DashboardView extends ItemView {
     // 朗读区放在页头里、工具外面：工具在浏览时是隐藏的，隐藏的元素不朗读
     this.liveEl = header.createDiv({ cls: "vp-sr-only", attr: { "aria-live": "polite", role: "status" } });
     const tools = actions.createDiv({ cls: "vp-edit-tools", attr: { role: "toolbar", "aria-label": L("编辑看板", "Edit dashboard") } });
-    this.undoBtn = this.iconButton(tools, "undo-2", L("撤销", "Undo"), () => this.undo()) as HTMLButtonElement;
+    // 纯图标的一层包在一起：外观不变，引导要整组高亮它
+    const icons = tools.createDiv({ cls: "vp-edit-icons" });
+    this.editIconsEl = icons;
+    this.undoBtn = this.iconButton(icons, "undo-2", L("撤销", "Undo"), () => this.undo()) as HTMLButtonElement;
     this.undoBtn.disabled = true;
     // 整理：卡片放在哪就在哪，不会自动补位；想排整齐，点这里把每张卡往上补
-    this.tidyBtn = this.iconButton(tools, "arrow-up-to-line", L("整理", "Tidy up"), () => this.applyLayout(tidyLayout(this.plugin.settings.layout))) as HTMLButtonElement;
+    this.tidyBtn = this.iconButton(icons, "arrow-up-to-line", L("整理", "Tidy up"), () => this.applyLayout(tidyLayout(this.plugin.settings.layout))) as HTMLButtonElement;
     // 外观：和“添加卡片”同一块底部面板，导航换成“背景”“主题”。只有图标，“外观”是悬停提示和读屏标签
-    this.lookBtnEl = this.iconButton(tools, "palette", L("外观", "Appearance"), () => this.toggleSheet("look"));
+    this.lookBtnEl = this.iconButton(icons, "palette", L("外观", "Appearance"), () => this.toggleSheet("look"));
     this.lookBtnEl.setAttr("aria-expanded", "false");
 
-    const more = tools.createDiv({ cls: "vp-edit-more" });
+    const more = icons.createDiv({ cls: "vp-edit-more" });
     const moreBtn = this.iconButton(more, "ellipsis", L("更多", "More"), () => this.setMoreOpen(!this.moreOpen));
     moreBtn.setAttr("aria-haspopup", "menu");
     moreBtn.setAttr("aria-expanded", "false");
@@ -1889,8 +1906,8 @@ export class DashboardView extends ItemView {
   }
 
   private maybeCelebrate() {
-    // 新版本引导还没看过（或正在看）时先不撒花，等看完再说，免得两样东西叠在一起
-    if (!this.stats || !this.isVisible() || this.editing || this.stats.totalNotes === 0 || this.tour?.active || this.plugin.settings.guideSeen !== GUIDE_VERSION) return;
+    // 这个面板马上要自动弹引导（或正在看）时先不撒花，等看完再说，免得两样东西叠在一起；手机上不弹短引导，照常撒花
+    if (!this.stats || !this.isVisible() || this.editing || this.stats.totalNotes === 0 || this.tour?.active || this.autoTour()) return;
     const set = this.plugin.settings;
     const ck = this.computeCheckin(this.stats);
     const found = achievements(this.dayContext(this.stats, ck), new Set(set.celebrated));

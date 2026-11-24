@@ -360,7 +360,6 @@ export class DashboardSettingTab extends PluginSettingTab {
           },
           {
             name: L("新手引导", "Guide"),
-            desc: L("一步一步看看 2.0 的新功能：编辑看板、拖动和调大小、切换图的样子、添加卡片。升级后第一次打开看板会自动出现一次。", "A step-by-step look at what is new in 2.0: editing the dashboard, dragging and resizing, switching chart styles, adding cards. It appears once automatically after upgrading."),
             render: (setting) => setting.addButton((b) => b.setButtonText(L("查看", "Show")).onClick(() => void this.plugin.showGuide())),
           },
           {

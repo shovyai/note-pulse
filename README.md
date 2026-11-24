@@ -23,7 +23,7 @@ The UI is in English and Chinese and follows Obsidian's language (you can pick o
 
 | Panel | What it shows |
 | --- | --- |
-| Customizable workbench (2.0–2.1) | 12-column grid you arrange yourself: free placement (cards stay where you drop them; empty cells stay empty), hover-pause nudge when overlapping, Pack / 整理 to tidy upward with undo, resize, add/remove cards, keyboard, and mobile view-only stacking |
+| Customizable workbench (2.0–2.1) | 12-column grid you arrange yourself: free placement (cards stay where you drop them; empty cells stay empty), hover-pause nudge when overlapping, Tidy up (整理) in the header to move cards up, with undo, resize, add/remove cards, keyboard, and mobile view-only stacking |
 | Appearance (unreleased) | In edit mode, the palette icon opens the same bottom sheet as "Add a card" with two sections. Background: follow the theme, gradient, paper, or up to 8 of your own colours (custom colour picker) and images (compressed to 1920 px and copied into `Note Pulse/backgrounds/` in your vault, so they sync); card opacity 0–100 % with a blur behind translucent cards. Theme: Default or Craft (warm paper, white cards, 16 px corners). The accent colour still follows Obsidian. Saved in `data.json`, applies on phones too; existing setups look exactly the same until you change something |
 | Headline | One sentence at the top: words written this week compared with the same days last week, your streak, today's goal and tasks due today |
 | Today's writing | Progress ring for today's words vs. your daily goal, current and longest streak, this week as dots or bars (switch on the card), weekly goal progress, and the notes you touched today |
@@ -54,6 +54,8 @@ Every note in the dashboard is clickable (mouse or keyboard). The dashboard refr
 ### Usage
 
 Click the dashboard icon in the left ribbon, or run the command **打开看板** (Open dashboard) from the command palette. Use **刷新看板数据** (Refresh dashboard) to recompute.
+
+The first time you open the dashboard, a step-by-step guide highlights the real interface. If you saw an earlier guide, you get a short tour of what changed instead, the first time you open the dashboard in a wide pane. To replay the full guide, run **查看新手引导** (Show the guide), choose **More → Guide** in the header while editing, or use **Guide** in settings.
 
 ### Writing goals and reports (1.5.0)
 
@@ -213,6 +215,16 @@ To release, run `npm version <patch|minor|major>` (updates `manifest.json` and `
 
 ## Changelog
 
+### 2.2.0
+
+- Add a card panel: slides up from the bottom, sorted by topic (Recommended, Writing progress, Trends and review, Tasks, Notes, Vault checkup), with a live preview of every card. Click to add, click again to remove, or drag a card onto the board.
+- A new install starts with 10 knowledge-base cards (Today, Recently edited, This month, Words, Notes, heatmap, Weekly writing, Top tags, Vault checkup, Writing review) and no task cards. Saved layouts are untouched; task cards stay in the Tasks category of the panel.
+- Edit bar redesigned: the tools move into the page header (undo, tidy, a More menu with Restore default and Guide, a soft Add a card, a solid Done) and the hint text is gone.
+- Three reminder switches in Settings: task due, streak and weekly goal. New installs only turn on task reminders; existing settings keep all three on.
+- Task stats: `⏳` (scheduled date) is no longer a due date, overdue is capped at 30 days, and checkboxes in clipping folders are not counted.
+- Vault checkup: daily notes (YYYY-MM-DD) are skipped as orphans, unused attachments only cover images, PDF, audio and video, and the "N items to tidy" line is gone from the header.
+- Guide updated: if you saw the 2.0 guide, a short what's-new tour appears once on a wide pane; new installs get the full guide with one more step.
+
 ### 2.1.1
 
 - Fix Obsidian community CSS review warnings.
@@ -341,7 +353,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 
 | 区块 | 内容 |
 | --- | --- |
-| 可自定义工作台（2.0–2.1） | 12 列网格自己排：自由摆放（卡片放哪就在哪，空位保持空着）、重叠时短暂停顿才让开、编辑栏「整理」一键上浮并可撤销、调大小、增删卡片、键盘操作；手机只看不改 |
+| 可自定义工作台（2.0–2.1） | 12 列网格自己排：自由摆放（卡片放哪就在哪，空位保持空着）、重叠时短暂停顿才让开、页头「整理」一键上浮并可撤销、调大小、增删卡片、键盘操作；手机只看不改 |
 | 外观（未发布） | 编辑看板时点调色盘图标，弹出和“添加卡片”同一块底部面板，分“背景”“主题”两类。背景：跟随主题、渐变、纸，或自己添加最多 8 个颜色（自画的取色界面）和图片（压缩到 1920 像素，复制进库里的 `Note Pulse/backgrounds/`，随库同步）；卡片透明度 0–100%，半透明时卡片后面加模糊。主题：默认、Craft（暖纸色、白卡、16px 圆角）。强调色仍跟随 Obsidian。存在 `data.json`，手机上同样生效；已有用户升级后外观不变 |
 | 页首一句话 | 本周写了多少、和上周同期比、连续写作天数、今天是否达标、今天到期的任务 |
 | 今日写作 | 今日字数与每日目标的进度环、当前与最长连续打卡、本周七天（圆点或柱状，卡片上切换）、每周目标进度、今天动过的笔记 |
@@ -367,6 +379,8 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 3. 重启 Obsidian，在「设置 → 第三方插件」中启用 **Note Pulse**。
 
 **使用：** 点左侧边栏的看板图标，或在命令面板运行「打开看板」。
+
+**新手引导：** 第一次打开看板时，会一步一步高亮真实的界面带你看一遍。看过旧版引导的，升级后第一次在宽面板打开看板时只看一段“新增了什么”的短引导。想再看完整的：命令面板里运行「查看新手引导」，或编辑时点页头的「更多 → 新手引导」，或在设置里点「新手引导」。
 
 ### 设置项
 
@@ -467,6 +481,16 @@ views:
 - 插件只在本地读取笔记，不联网，不收集任何数据。
 
 ### 更新日志
+
+**2.2.0**
+
+- 添加卡片面板重做：从底部弹起，按主题分类（推荐、写作进度、趋势与回顾、任务、笔记、库体检），每张卡是真实预览。点一下添加，再点一下取消，也可以拖到看板上。
+- 新装用户的默认看板是 10 张知识库卡片（今日写作、最近编辑、本月写作、总字数、笔记、热力图、每周写作、常用标签、库体检、写作回顾），不放任务卡。已保存的布局不变，任务卡仍在面板的“任务”类里。
+- 编辑栏重做：编辑工具并入页头（撤销、整理、含“恢复默认布局”和“新手引导”的“更多”菜单、淡色底的“添加卡片”、实心的“完成”），说明文字去掉。
+- 设置里新增三个提醒开关：任务到期、连续打卡、周目标。新装只开任务到期提醒；已有设置的库三个都保持开着。
+- 任务统计：`⏳`（计划开始日）不再算截止日，逾期最多算 30 天，采集文件夹里的复选框不计入。
+- 库体检：以 YYYY-MM-DD 命名的日记不再算孤立笔记，未引用的附件只查图片、PDF、音视频，页首去掉“N 项可整理”。
+- 新手引导跟上新界面：看过 2.0 引导的老用户，在宽面板上只看一次简短的“新增了什么”；新装用户看完整引导，多一步。
 
 **2.1.1**
 

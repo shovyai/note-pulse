@@ -1,40 +1,90 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GUIDE_VERSION, placeCard, tourSteps, visibleRect } from "../src/tour-logic";
+import { GUIDE_VERSION, autoTourKind, placeCard, tourSteps, visibleRect } from "../src/tour-logic";
 
-test("引导步骤（电脑）：id 不重复，文字不为空；先讲看、再进编辑、再讲添加，最后回到看板；展开面板时一定在编辑模式里", () => {
-  const steps = tourSteps(true);
+/** 各套引导共同的要求：id 不重复、文字不为空、展开面板一定在编辑模式里、首尾没有目标并回到普通看板 */
+function wellFormed(steps: ReturnType<typeof tourSteps>, name: string) {
   const ids = steps.map((s) => s.id);
-  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(new Set(ids).size, ids.length, name);
   for (const s of steps) {
-    assert.ok(s.title.length > 0 && s.body.length > 10, s.id);
-    if (s.state.addOpen) assert.ok(s.state.editing, `${s.id} 展开面板必须在编辑模式`);
-    if (s.demo) assert.ok(s.target, `${s.id} 有演示就要有目标`);
+    assert.ok(s.title.length > 0 && s.body.length > 10, `${name}/${s.id}`);
+    if (s.state.addOpen) assert.ok(s.state.editing, `${name}/${s.id} 展开面板必须在编辑模式`);
+    if (s.demo) assert.ok(s.target, `${name}/${s.id} 有演示就要有目标`);
+    // 新界面里没有“编辑栏”了，也不再说版本号
+    assert.ok(!/编辑栏|edit bar|2\.0/i.test(s.title + s.body), `${name}/${s.id} 文字还指向旧界面`);
   }
-  const at = (id: string) => ids.indexOf(id);
-  assert.ok(at("edit") > at("greeting") && at("drag") > at("edit") && at("resize") > at("drag") && at("add") > at("switch") && at("library") > at("add") && at("done") > at("library"));
-  assert.equal(steps[0].target, undefined, "第一步没有目标（欢迎）");
-  assert.equal(steps[steps.length - 1].target, undefined, "最后一步没有目标");
-  assert.deepEqual(steps[steps.length - 1].state, { editing: false, addOpen: false }, "最后回到普通看板");
+  assert.equal(steps[0].target, undefined, `${name} 第一步没有目标`);
+  assert.equal(steps[steps.length - 1].target, undefined, `${name} 最后一步没有目标`);
+  assert.deepEqual(steps[steps.length - 1].state, { editing: false, addOpen: false }, `${name} 最后回到普通看板`);
+}
+
+test("完整引导（电脑）：先讲看、再进编辑、讲卡片、讲页头的编辑工具、再讲添加，最后回到看板", () => {
+  const steps = tourSteps(true, "full");
+  wellFormed(steps, "full");
+  const ids = steps.map((s) => s.id);
+  assert.deepEqual(ids, ["welcome", "greeting", "alerts", "edit", "drag", "resize", "switch", "tools", "add", "library", "done", "finish"]);
   assert.equal(steps.find((s) => s.id === "library")!.state.addOpen, true);
   assert.equal(steps.find((s) => s.id === "drag")!.state.addOpen, false);
+  assert.equal(steps.find((s) => s.id === "tools")!.target, "tools");
+  assert.ok(steps.find((s) => s.id === "tools")!.state.editing);
+  assert.deepEqual(tourSteps(true), steps, "不指定时是完整引导");
 });
 
-test("引导步骤（手机、窄面板）：只讲看得到的，不进编辑模式", () => {
-  const steps = tourSteps(false);
-  assert.ok(steps.length >= 3 && steps.length < tourSteps(true).length);
-  for (const s of steps) {
-    assert.equal(s.state.editing, false, s.id);
-    assert.equal(s.demo, undefined, s.id);
+test("新增内容的短引导（电脑）：只讲页头的编辑工具、底部的添加面板和完成，不重讲拖动和调大小", () => {
+  const steps = tourSteps(true, "news");
+  wellFormed(steps, "news");
+  assert.deepEqual(
+    steps.map((s) => s.id),
+    ["news", "alerts", "tools", "library", "done", "finish"]
+  );
+  assert.ok(steps.length < tourSteps(true, "full").length);
+  assert.equal(steps.find((s) => s.id === "library")!.state.addOpen, true);
+});
+
+test("提醒那一步说得出提醒能在设置里分别开关", () => {
+  for (const kind of ["full", "news"] as const) {
+    const a = tourSteps(true, kind).find((s) => s.id === "alerts")!;
+    assert.match(a.body, /设置|settings/i, kind);
   }
-  assert.ok(!steps.some((s) => ["edit", "drag", "resize", "add", "library", "done"].includes(s.id)));
 });
 
-test("可能找不到目标的步骤（提醒、带切换的卡片）标成可选，其余必有目标的不可选", () => {
+test("结束页把再看一遍的入口指到命令面板和页头的“更多”", () => {
+  for (const kind of ["full", "news"] as const) {
+    const end = tourSteps(true, kind).at(-1)!;
+    assert.match(end.body, /命令面板|command palette/i, kind);
+    assert.match(end.body, /更多|More/, kind);
+  }
+});
+
+test("谁自动看到哪套引导：没看过的看完整，看过旧版的在宽面板看短引导，看过新版的不弹", () => {
+  assert.equal(autoTourKind("", true), "full");
+  assert.equal(autoTourKind("", false), "full", "新装在手机上也看只看版");
+  assert.equal(autoTourKind("2.0", true), "news");
+  assert.equal(autoTourKind("2.0", false), null, "老用户在手机和窄面板上不弹，等到宽面板");
+  assert.equal(autoTourKind(GUIDE_VERSION, true), null);
+  assert.equal(autoTourKind(GUIDE_VERSION, false), null);
+  assert.notEqual(GUIDE_VERSION, "2.0", "版本记号要变，看过 2.0 的才会再看到短引导");
+});
+
+test("引导步骤（手机、窄面板）：只讲看得到的，不进编辑模式；两种都一样", () => {
+  for (const kind of ["full", "news"] as const) {
+    const steps = tourSteps(false, kind);
+    wellFormed(steps, `narrow/${kind}`);
+    assert.deepEqual(steps.map((s) => s.id), ["welcome", "greeting", "alerts", "cards", "finish"]);
+    for (const s of steps) {
+      assert.equal(s.state.editing, false, s.id);
+      assert.equal(s.demo, undefined, s.id);
+    }
+  }
+});
+
+test("可能找不到目标的步骤（提醒、卡片、带切换的卡片）标成可选，其余必有目标的不可选", () => {
   for (const wide of [true, false]) {
-    for (const s of tourSteps(wide)) {
-      if (["alerts", "cards", "switch"].includes(s.id)) assert.ok(s.optional, s.id);
-      if (["greeting", "edit", "drag", "resize", "add", "library", "done"].includes(s.id)) assert.ok(!s.optional, s.id);
+    for (const kind of ["full", "news"] as const) {
+      for (const s of tourSteps(wide, kind)) {
+        if (["alerts", "cards", "switch"].includes(s.id)) assert.ok(s.optional, s.id);
+        if (["greeting", "edit", "drag", "resize", "tools", "add", "library", "done"].includes(s.id)) assert.ok(!s.optional, s.id);
+      }
     }
   }
 });
