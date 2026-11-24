@@ -80,3 +80,8 @@ W.createSpan = (o?: Opts) => {
   apply(el, o);
   return el;
 };
+W.createEl = (tag: string, o?: Opts) => {
+  const el = document.createElement(tag);
+  apply(el, o);
+  return el;
+};

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Note Pulse 外观预览</title>
+<link rel="stylesheet" href="obsidian-vars.css">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+/* 预览页自己的：和 Obsidian 一样，看板根元素自己是滚动容器，背景图贴在它上面不随内容滚动 */
+html, body { height: 100%; margin: 0; }
+body { overflow: hidden; }
+#app { height: 100%; }
+#app > .vp-root { height: 100%; overflow-y: auto; box-sizing: border-box; }
+#app.is-phone { width: 390px; margin: 0 auto; }
+.proto-json { position: fixed; top: 8px; left: 8px; z-index: 80; margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,.78); color: #d8f0d0; font: 11px/1.4 ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="appearance.js"></script>
+</body>
+</html>
