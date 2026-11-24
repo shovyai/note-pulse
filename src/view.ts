@@ -1637,8 +1637,6 @@ export class DashboardView extends ItemView {
     } else if (c.changePct === 0) sub.createSpan({ text: L("，和上周同期持平", ", the same as this point last week") });
     const bits: string[] = [];
     if (c.streak > 0) bits.push(L(`连续写作第 ${c.streak} 天`, `Day ${c.streak} of your streak`));
-    const tidy = this.tidyCount(s);
-    if (tidy > 0) bits.push(L(`库里有 ${fmtFull(tidy)} 项可整理`, `${fmtFull(tidy)} to tidy up in the vault`));
     if (bits.length) sub.createSpan({ text: ` · ${bits.join(" · ")}` });
   }
 
@@ -2896,15 +2894,6 @@ export class DashboardView extends ItemView {
   }
 
   /* ---------- 8. 库体检：6 张卡 ---------- */
-
-  /** 库里一共有多少项可以整理（页首总结句用） */
-  private tidyCount(s: VaultStats): number {
-    const c = checkupModel(s);
-    const dd = this.plugin.dedupe;
-    const dupOn = this.plugin.settings.dedupeEnabled && this.plugin.settings.dedupeCard;
-    const dup = dupOn && dd.analysis ? significantPairs(dd.analysis, dd.ignoredSet()).length : 0;
-    return c.unresolvedCount + c.orphans.length + c.empty.length + c.big.length + c.sameName.length + c.unusedAttachments.length + dup;
-  }
 
   /**
    * 体检卡的共同骨架：标题旁一个数量（有问题时用警示色），下面是列表，放不下的行折叠成“还有 N 个”。

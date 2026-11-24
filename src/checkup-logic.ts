@@ -85,8 +85,16 @@ export function sameNameGroups(notePaths: string[]): string[][] {
   return [...by.values()].filter((g) => g.length > 1).map((g) => g.sort()).sort((a, b) => a[0].localeCompare(b[0]));
 }
 
-/** 不是笔记、也不是 Obsidian 自己的文件：图片、PDF、音视频等附件 */
-const ATTACHMENT_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif|heic|pdf|mp3|m4a|wav|ogg|flac|mp4|mov|webm|mkv|docx?|xlsx?|pptx?|zip|txt|csv)$/i;
+/** 附件：图片、PDF、音视频。文本、表格、Office 文件、压缩包常是有意放进库里存着的，不算附件，不提示清理 */
+const ATTACHMENT_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif|heic|pdf|mp3|m4a|wav|ogg|flac|mp4|mov|webm|mkv)$/i;
+
+/** 日记：文件名是 YYYY-MM-DD（日期要真实存在），不看文件夹。日记本来就不互相链接，不算孤立笔记 */
+export function isDailyNote(path: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(baseName(path));
+  if (!m) return false;
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return d.getMonth() === +m[2] - 1 && d.getDate() === +m[3];
+}
 
 export function isAttachment(path: string): boolean {
   return ATTACHMENT_EXT.test(path);

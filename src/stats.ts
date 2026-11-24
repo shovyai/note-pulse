@@ -1,7 +1,7 @@
 import { App, CachedMetadata, TFile, getAllTags } from "obsidian";
 import { countWords } from "./count";
 import { DashboardSettings, normalizeFolder, splitList } from "./settings";
-import { LinkSuggestion, inFolders, sameNameGroups, suggestTarget, unusedAttachments } from "./checkup-logic";
+import { LinkSuggestion, inFolders, isDailyNote, sameNameGroups, suggestTarget, unusedAttachments } from "./checkup-logic";
 import { classifyDue, dueDateOf } from "./task-logic";
 
 /** 内容少于这个字数的日记（多半是空模板）不算打卡 */
@@ -581,9 +581,9 @@ export async function computeStats(
     .slice(0, 15)
     .map(([p, count]) => ({ file: byPath.get(p), count }))
     .filter((x): x is { file: TFile; count: number } => !!x.file);
-  // 孤立笔记：设置里忽略的文件夹、采集文件夹不检查
+  // 孤立笔记：设置里忽略的文件夹、采集文件夹、日记（YYYY-MM-DD 命名）不检查
   const orphanSkip = [...splitList(settings.orphanIgnoreFolders || "").map(normalizeFolder), ...clipping];
-  const orphans = files.filter((f) => !inbound.has(f.path) && !hasOutbound.has(f.path) && !inFolders(f.path, orphanSkip));
+  const orphans = files.filter((f) => !inbound.has(f.path) && !hasOutbound.has(f.path) && !inFolders(f.path, orphanSkip) && !isDailyNote(f.path));
   const unresolvedMap = new Map<string, number>();
   const unresolvedSource: Record<string, string> = {};
   const unresolvedFrom: Record<string, string[]> = {};

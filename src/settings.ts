@@ -192,8 +192,8 @@ export class DashboardSettingTab extends PluginSettingTab {
           {
             name: L("孤立笔记不检查的文件夹", "Folders skipped for orphans"),
             desc: L(
-              "库体检不把这些文件夹里没有链接的笔记算作孤立笔记，比如日记、对话记录。采集文件夹自动不检查。每行一个，或用逗号分隔。",
-              "Vault checkup doesn't count unlinked notes in these folders as orphans, for example daily notes or chat logs. Clipping folders are skipped automatically. One per line or comma-separated."
+              "库体检不把这些文件夹里没有链接的笔记算作孤立笔记，比如对话记录。采集文件夹和以 YYYY-MM-DD 命名的日记自动不检查。每行一个，或用逗号分隔。",
+              "Vault checkup doesn't count unlinked notes in these folders as orphans, for example chat logs. Clipping folders and notes named YYYY-MM-DD (daily notes) are skipped automatically. One per line or comma-separated."
             ),
             render: (setting) =>
               setting.addTextArea((t) => {
