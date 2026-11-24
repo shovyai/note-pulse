@@ -210,6 +210,16 @@ To release, run `npm version <patch|minor|major>` (updates `manifest.json` and `
 
 ## Changelog
 
+### 2.2.0
+
+- Add a card panel: slides up from the bottom, sorted by topic (Recommended, Writing progress, Trends and review, Tasks, Notes, Vault checkup), with a live preview of every card. Click to add, click again to remove, or drag a card onto the board.
+- A new install starts with 10 knowledge-base cards (Today, Recently edited, This month, Words, Notes, heatmap, Weekly writing, Top tags, Vault checkup, Writing review) and no task cards. Saved layouts are untouched; task cards stay in the Tasks category of the panel.
+- Edit bar redesigned: the tools move into the page header (undo, tidy, a More menu with Restore default and Guide, a soft Add a card, a solid Done) and the hint text is gone.
+- Three reminder switches in Settings: task due, streak and weekly goal. New installs only turn on task reminders; existing settings keep all three on.
+- Task stats: `⏳` (scheduled date) is no longer a due date, overdue is capped at 30 days, and checkboxes in clipping folders are not counted.
+- Vault checkup: daily notes (YYYY-MM-DD) are skipped as orphans, unused attachments only cover images, PDF, audio and video, and the "N items to tidy" line is gone from the header.
+- Guide updated: if you saw the 2.0 guide, a short what's-new tour appears once on a wide pane; new installs get the full guide with one more step.
+
 ### 2.1.1
 
 - Fix Obsidian community CSS review warnings.
@@ -465,6 +475,16 @@ views:
 - 插件只在本地读取笔记，不联网，不收集任何数据。
 
 ### 更新日志
+
+**2.2.0**
+
+- 添加卡片面板重做：从底部弹起，按主题分类（推荐、写作进度、趋势与回顾、任务、笔记、库体检），每张卡是真实预览。点一下添加，再点一下取消，也可以拖到看板上。
+- 新装用户的默认看板是 10 张知识库卡片（今日写作、最近编辑、本月写作、总字数、笔记、热力图、每周写作、常用标签、库体检、写作回顾），不放任务卡。已保存的布局不变，任务卡仍在面板的“任务”类里。
+- 编辑栏重做：编辑工具并入页头（撤销、整理、含“恢复默认布局”和“新手引导”的“更多”菜单、淡色底的“添加卡片”、实心的“完成”），说明文字去掉。
+- 设置里新增三个提醒开关：任务到期、连续打卡、周目标。新装只开任务到期提醒；已有设置的库三个都保持开着。
+- 任务统计：`⏳`（计划开始日）不再算截止日，逾期最多算 30 天，采集文件夹里的复选框不计入。
+- 库体检：以 YYYY-MM-DD 命名的日记不再算孤立笔记，未引用的附件只查图片、PDF、音视频，页首去掉“N 项可整理”。
+- 新手引导跟上新界面：看过 2.0 引导的老用户，在宽面板上只看一次简短的“新增了什么”；新装用户看完整引导，多一步。
 
 **2.1.1**
 
