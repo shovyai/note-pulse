@@ -2,6 +2,12 @@
 
 The full history (English and 中文) is in the README. Highlights:
 
+## 2.3.0
+
+- 外观：编辑看板时，纯图标那一层（整理和更多之间）多了调色盘图标“外观”，点开是和“添加卡片”同一块底部面板，导航“背景”“主题”，选了立刻在上面的看板生效。背景：跟随主题、渐变、纸，加“我的背景”（自己添加的颜色和图片，最多 8 个，悬停格子左上角可删除；删除图片只从列表里去掉，库里的文件保留）。颜色用自画的取色界面（色块、色相条、十六进制输入框）；图片用系统文件选择器选，压缩到长边 1920 像素（JPEG 质量 0.82，超过 20 MB 不收），复制进库里的 `Note Pulse/backgrounds/`，随库同步；图片在库里被删或还没同步到时页面退回主题底色，改名时记录跟着改。卡片透明度 0–100%，低于 100% 时卡片后面加模糊，卡片里的小面板一起透明；自选颜色或图片背景下卡片渐变成和背景明暗一致的玻璃色，字色在 60% 处用 240ms 渐变切换；页首文字按背景明暗换深浅，图片背景顶部加一层渐隐罩。主题：默认、Craft。强调色仍跟随 Obsidian。存在 `data.json` 的 `appearance` 字段，手机上同样生效（手机没有编辑入口）；没有这个字段（已有用户升级）时就是原来的样子，设置版本号不变。
+
+- Appearance: in edit mode, a palette icon between Tidy up and More opens the same bottom sheet as Add a card, with Background and Theme; changes apply to the dashboard right away. Background: follow the theme, Gradient, Paper, plus up to 8 of your own colours (custom colour picker with a hex field) and images (system file picker; compressed to 1920 px, JPEG 0.82, over 20 MB refused; copied into `Note Pulse/backgrounds/` so they sync). Removing an image only drops it from the list; a missing image falls back to the theme's background, and a renamed one is followed. Card opacity 0–100 %: below 100 % cards blur what is behind them, nested panels go translucent with them, and on your own colours and images the cards fade to glass matching the background, with the text colour switching at 60 % over 240 ms. Header text follows the background's lightness; image backgrounds get a fade at the top. Themes: Default and Craft. The accent colour still follows Obsidian. Saved as `appearance` in `data.json` and applied on phones too (phones have no edit mode); without that field (existing setups) nothing changes and the settings version stays the same.
+
 ## 2.2.0
 
 - 添加卡片面板重做：从底部弹起，按主题分类（推荐、写作进度、趋势与回顾、任务、笔记、库体检），每张卡是真实预览，点一下添加、再点一下取消，也可以直接拖到看板上；“推荐”一栏就是新装用户的默认看板。

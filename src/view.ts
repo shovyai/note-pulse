@@ -53,6 +53,8 @@ import {
   svgEl,
 } from "./charts";
 import { baseName } from "./checkup-logic";
+import { Appearance, BACKGROUNDS, LOOK_CLASS, THEMES, appearanceLook, renameImage } from "./appearance";
+import { LookPanel, vaultImageUrl } from "./appearance-panel";
 import { L, UnitKind, count, weekdayLetter, yearMonth, fullDate, monthDay, monthShort, plural, unit, weekdayName, weekdayShort } from "./i18n";
 
 let reportDetailsId = 0;
@@ -209,6 +211,9 @@ export class DashboardView extends ItemView {
     root.addClass("vp-root");
     this.sheetHost = null;
     if (Platform.isMobile) root.addClass("is-mobile");
+    // 外观（主题、背景、卡片透明度）：只是根元素上的类名和几个自定义属性，手机上也生效
+    this.applyLook();
+    this.watchLookImages();
     const shell = root.createDiv({ cls: "vp-shell" });
 
     const header = shell.createDiv({ cls: "vp-header" });
@@ -590,6 +595,8 @@ export class DashboardView extends ItemView {
     this.tourRestore = { editing: this.editing, addOpen: this.addOpen };
     this.tour = new Tour(this.tourHost(), tourSteps(this.tourWide(), kind));
     this.tour.start();
+    // 引导层挂在 body 上、看板根元素外面：补上主题类名，才吃得到这套主题的令牌（tour.ts 由另一个任务在改，这里不动它）
+    this.contentEl.ownerDocument.body.querySelector<HTMLElement>(":scope > .vp-tour")?.addClass(this.themeCls());
   }
 
   private tourHost(): TourHost {
@@ -617,6 +624,8 @@ export class DashboardView extends ItemView {
   private tourApply(state: TourState) {
     if (state.editing !== this.editing) this.toggleEditing();
     if (this.editing && state.addOpen !== this.addOpen) this.setAddOpen(state.addOpen);
+    // 引导讲的是添加卡片：外观那一组开着时换回添加那一组
+    else if (this.editing && state.addOpen && this.sheetGroup !== "add") this.setSheetGroup("add");
   }
 
   /** 引导这一步要高亮的界面元素；找不到返回 null */
@@ -823,7 +832,7 @@ export class DashboardView extends ItemView {
 
   /** 编辑工具：常驻在页头右侧，只在编辑时显示（根元素带 vp-editing，浏览时的状态、铅笔、全屏、刷新、设置让位）。
    * 三层：纯图标（撤销、整理、更多）；淡色底的“添加卡片”；实心的“完成”在最右。添加面板从底部弹起。
-   * 以后加“外观”按钮，放在纯图标那一层，整理和更多之间。 */
+   * “外观”按钮在纯图标那一层，整理和更多之间。 */
   private buildEditTools(header: HTMLElement, actions: HTMLElement) {
     // 朗读区放在页头里、工具外面：工具在浏览时是隐藏的，隐藏的元素不朗读
     this.liveEl = header.createDiv({ cls: "vp-sr-only", attr: { "aria-live": "polite", role: "status" } });
@@ -835,6 +844,9 @@ export class DashboardView extends ItemView {
     this.undoBtn.disabled = true;
     // 整理：卡片放在哪就在哪，不会自动补位；想排整齐，点这里把每张卡往上补
     this.tidyBtn = this.iconButton(icons, "arrow-up-to-line", L("整理", "Tidy up"), () => this.applyLayout(tidyLayout(this.plugin.settings.layout))) as HTMLButtonElement;
+    // 外观：和“添加卡片”同一块底部面板，导航换成“背景”“主题”。只有图标，“外观”是悬停提示和读屏标签
+    this.lookBtnEl = this.iconButton(icons, "palette", L("外观", "Appearance"), () => this.toggleSheet("look"));
+    this.lookBtnEl.setAttr("aria-expanded", "false");
 
     const more = icons.createDiv({ cls: "vp-edit-more" });
     const moreBtn = this.iconButton(more, "ellipsis", L("更多", "More"), () => this.setMoreOpen(!this.moreOpen));
@@ -867,7 +879,7 @@ export class DashboardView extends ItemView {
       b.addEventListener("click", fn);
       return b;
     };
-    this.addBtnEl = label("vp-edit-add", "plus", L("添加卡片", "Add a card"), () => this.setAddOpen(!this.addOpen));
+    this.addBtnEl = label("vp-edit-add", "plus", L("添加卡片", "Add a card"), () => this.toggleSheet("add"));
     this.addBtnEl.setAttr("aria-expanded", "false");
     this.doneBtnEl = label("is-primary", "check", L("完成", "Done"), () => this.toggleEditing());
   }
@@ -908,7 +920,16 @@ export class DashboardView extends ItemView {
     this.contentEl.toggleClass("vp-editing", this.editing && !this.narrow);
     if (this.undoBtn) this.undoBtn.disabled = this.undoStack.length === 0;
     this.updateTidy();
-    this.addBtnEl?.setAttr("aria-expanded", String(this.addOpen));
+    this.syncSheetButtons();
+  }
+
+  /** “添加卡片”和“外观”按钮的展开状态：面板开着且显示的是自己那一组才算展开（外观图标按下，和“更多”菜单展开时一样） */
+  private syncSheetButtons() {
+    const add = this.addOpen && this.sheetGroup === "add";
+    const look = this.addOpen && this.sheetGroup === "look";
+    this.addBtnEl?.setAttr("aria-expanded", String(add));
+    this.lookBtnEl?.setAttr("aria-expanded", String(look));
+    this.lookBtnEl?.toggleClass("is-open", look);
   }
 
   /** 添加面板（从底部弹起）：选中的分类 */
@@ -923,11 +944,29 @@ export class DashboardView extends ItemView {
   /** 正在为添加面板渲染预览时：这张卡按它在面板里的尺寸算，不按看板上那张 */
   private previewItem: WidgetLayoutItem | null = null;
 
-  /** 打开或收起添加面板 */
-  private setAddOpen(open: boolean) {
+  /** 面板里显示哪一组：add 添加卡片（6 类），look 外观（背景、主题） */
+  private sheetGroup: "add" | "look" = "add";
+  private lookTab: "background" | "theme" = "background";
+  private lookPanes = new Map<"background" | "theme", HTMLElement>();
+  private lookNavBtns = new Map<"background" | "theme", HTMLElement>();
+  private lookRendered = new Set<string>();
+  private lookPanel: LookPanel | null = null;
+  private sheetTitleEl: HTMLElement | null = null;
+  private lookBtnEl: HTMLElement | null = null;
+
+  /** 编辑栏的“添加卡片”“外观”：面板收着就弹起这一组；开着别的组就换过来（面板不收起）；开着这一组就收起 */
+  private toggleSheet(group: "add" | "look") {
+    if (!this.addOpen) this.setAddOpen(true, group);
+    else if (this.sheetGroup !== group) this.setSheetGroup(group);
+    else this.setAddOpen(false);
+  }
+
+  /** 打开或收起添加面板（group 是打开时显示哪一组） */
+  private setAddOpen(open: boolean, group: "add" | "look" = "add") {
     const ok = open && this.editing && !this.narrow && !!this.stats;
     this.addOpen = ok;
-    this.addBtnEl?.setAttr("aria-expanded", String(ok));
+    if (ok) this.sheetGroup = group;
+    this.syncSheetButtons();
     if (!ok) {
       this.contentEl.removeClass("vp-sheet-open");
       this.sheetHost?.firstElementChild?.removeClass("is-open");
@@ -939,8 +978,94 @@ export class DashboardView extends ItemView {
     this.contentEl.addClass("vp-sheet-open");
     void panel.offsetWidth; // 先以收起的样子排一遍版，再加 is-open，弹起动画才会播
     panel.addClass("is-open");
-    const pane = this.sheetPanes.get(this.galleryCat);
+    const pane = this.sheetGroup === "look" ? this.lookPanes.get(this.lookTab) : this.sheetPanes.get(this.galleryCat);
     if (pane) this.riseTiles(pane, "var(--vp-t-fast)");
+  }
+
+  /** 面板开着时换组：标题、导航、内容换成这一组，面板不动 */
+  private setSheetGroup(group: "add" | "look", first = false) {
+    this.sheetGroup = group;
+    this.syncSheetButtons();
+    const panel = this.sheetHost?.firstElementChild as HTMLElement | null;
+    if (!panel) return;
+    panel.dataset.group = group;
+    const title = group === "look" ? L("外观", "Appearance") : L("添加卡片", "Add cards");
+    this.sheetTitleEl?.setText(title);
+    panel.setAttr("aria-label", title);
+    if (group === "look") this.activateLookTab(this.lookTab, first);
+    else this.activateGalleryCat(this.galleryCat, first);
+  }
+
+  private activateLookTab(id: "background" | "theme", first = false) {
+    this.lookTab = id;
+    for (const [tid, pane] of this.lookPanes) pane.toggleClass("is-active", tid === id);
+    for (const [tid, b] of this.lookNavBtns) {
+      b.toggleClass("is-active", tid === id);
+      b.setAttr("aria-current", tid === id ? "page" : "false");
+    }
+    const btn = this.lookNavBtns.get(id);
+    if (btn) this.placeSheetInd(btn, first);
+    const pane = this.lookPanes.get(id);
+    if (!pane) return;
+    if (pane.parentElement) pane.parentElement.scrollTop = 0;
+    // 和添加卡片一样：隐藏着的分类没有尺寸，第一次切到时才画
+    if (!this.lookRendered.has(id) && this.lookPanel) {
+      this.lookRendered.add(id);
+      if (id === "background") this.lookPanel.buildBackground(pane, (n) => this.lookNavBtns.get("background")?.querySelector(".vp-gal-count")?.setText(String(n)));
+      else this.lookPanel.buildTheme(pane);
+    }
+    if (!first) this.riseTiles(pane, "0ms");
+  }
+
+  /* ---------- 外观：挂到看板根元素上 ---------- */
+
+  /** 把设置里的外观挂到看板根元素上（类名和自定义属性）；面板开着就同步面板里的选中状态 */
+  applyLook(restyle = false) {
+    const root = this.contentEl;
+    const look = appearanceLook(this.plugin.settings.appearance, (p) => vaultImageUrl(this.app, p));
+    for (const c of Array.from(root.classList)) if (LOOK_CLASS.test(c)) root.removeClass(c);
+    root.addClass(...look.classes);
+    root.setCssProps({ "--vp-custom": look.props["--vp-custom"] ?? "", "--vp-page-image": look.props["--vp-page-image"] ?? "", "--vp-card-op": look.props["--vp-card-op"] ?? "" });
+    // 换主题、换成或离开图片：看板整体淡入一下，颜色、圆角、阴影、图片同时变，不会各变各的
+    if (restyle && this.motionOn()) {
+      root.removeClass("vp-restyle");
+      void root.offsetWidth;
+      this.flagFor(root, "vp-restyle", 600);
+    }
+    this.lookPanel?.sync();
+  }
+
+  /** 挂在看板根元素外面的层（庆祝、拖入预览、新手引导）要带上主题类名，才吃得到这套主题的令牌 */
+  private themeCls(): string {
+    return `vp-theme-${this.plugin.settings.appearance.theme}`;
+  }
+
+  /** 改外观：立刻生效；拖动中（live）不保存、不带过渡，松手时再存进 data.json */
+  private setLook(next: Appearance, opts: { live?: boolean; restyle?: boolean } = {}) {
+    const prev = this.plugin.settings.appearance;
+    this.plugin.settings.appearance = next;
+    this.contentEl.toggleClass("is-picking", !!opts.live);
+    this.applyLook(!!opts.restyle);
+    if (opts.live) return;
+    void this.plugin.saveViewSetting();
+    // Craft 的卡片内边距不同：列表按新的高度重新截一遍
+    if (prev.theme !== next.theme) for (const fit of this.fitters.values()) fit();
+  }
+
+  /** 背景图片在库里被删、改名，或者别的设备同步过来：页面跟着变（文件没了退回主题底色，不报错） */
+  private watchLookImages() {
+    const uses = (path: string) => this.plugin.settings.appearance.backgrounds.some((m) => m.image === path);
+    this.registerEvent(this.app.vault.on("create", (f) => uses(f.path) && this.applyLook()));
+    this.registerEvent(this.app.vault.on("delete", (f) => uses(f.path) && this.applyLook()));
+    this.registerEvent(
+      this.app.vault.on("rename", (f, oldPath) => {
+        if (uses(oldPath)) {
+          this.plugin.settings.appearance = renameImage(this.plugin.settings.appearance, oldPath, f.path);
+          void this.plugin.saveViewSetting();
+          this.applyLook();
+        } else if (uses(f.path)) this.applyLook();
+      })
+    );
   }
 
   /** 左边按主题分的导航，右边是这一类卡片的真实预览；每张卡一个预览，点一下添加，再点取消，大小靠看板上的拖角调 */
@@ -957,7 +1082,7 @@ export class DashboardView extends ItemView {
     this.sheetHost = host;
     const panel = host.createDiv({ cls: "vp-add-panel vp-sheet", attr: { role: "dialog", "aria-label": L("添加卡片", "Add cards") } });
     const top = panel.createDiv({ cls: "vp-sheet-top" });
-    top.createDiv({ cls: "vp-sheet-title", text: L("添加卡片", "Add cards") });
+    this.sheetTitleEl = top.createDiv({ cls: "vp-sheet-title", text: L("添加卡片", "Add cards") });
     const done = top.createEl("button", { cls: "vp-btn is-compact is-primary", text: L("完成", "Done"), attr: { type: "button" } });
     done.addEventListener("click", () => this.setAddOpen(false));
     const main = panel.createDiv({ cls: "vp-sheet-main" });
@@ -973,7 +1098,33 @@ export class DashboardView extends ItemView {
       this.sheetNavBtns.set(cat.id, b);
       this.sheetPanes.set(cat.id, content.createDiv({ cls: "vp-gal-pane" }));
     }
-    this.activateGalleryCat(this.galleryCat, true);
+    // 外观那一组：同一个导航和内容区里另一组按钮和分类，面板上的 data-group 决定显示哪一组
+    this.lookPanes.clear();
+    this.lookNavBtns.clear();
+    this.lookRendered.clear();
+    this.lookPanel = new LookPanel({
+      app: this.app,
+      get: () => this.plugin.settings.appearance,
+      set: (next, opts) => this.setLook(next, opts),
+      imageUrl: (p) => vaultImageUrl(this.app, p),
+      renderCard: (slot, id, cols, rows) => {
+        if (this.stats) this.renderPreview(slot, id, cols, rows, this.stats, this.computeCheckin(this.stats));
+      },
+      gridWidth: () => this.gridWidth(),
+    });
+    const looks: { id: "background" | "theme"; name: string; count: number }[] = [
+      { id: "background", name: L("背景", "Background"), count: 1 + BACKGROUNDS.length + this.plugin.settings.appearance.backgrounds.length },
+      { id: "theme", name: L("主题", "Theme"), count: THEMES.length },
+    ];
+    for (const t of looks) {
+      const b = nav.createEl("button", { cls: "vp-gal-navitem vp-look-nav", attr: { type: "button", "data-fid": `look:${t.id}` } });
+      b.createSpan({ text: t.name });
+      b.createSpan({ cls: "vp-gal-count", text: String(t.count) });
+      b.addEventListener("click", () => this.activateLookTab(t.id));
+      this.lookNavBtns.set(t.id, b);
+      this.lookPanes.set(t.id, content.createDiv({ cls: "vp-gal-pane vp-look-pane" }));
+    }
+    this.setSheetGroup(this.sheetGroup, true);
   }
 
   private activateGalleryCat(id: GalleryCategoryId, first = false) {
@@ -1065,7 +1216,7 @@ export class DashboardView extends ItemView {
       if (btn.hasClass("is-picked")) return;
       this.gesture?.dragIn(btn, { id, x: 0, y: 0, w: cols, h: rows }, e, () => {
         // 不能放进看板的容器里：它是 container-type 元素，里面的 fixed 定位会相对它而不是窗口，预览就会偏离指针。带上 vp-root 是为了拿到设计令牌
-        const ghost = createDiv({ cls: "vp-gal-ghost vp-root", attr: { "aria-hidden": "true" } });
+        const ghost = createDiv({ cls: `vp-gal-ghost vp-root ${this.themeCls()}`, attr: { "aria-hidden": "true" } });
         ghost.appendChild(frame.cloneNode(true));
         return ghost;
       });
@@ -1771,7 +1922,7 @@ export class DashboardView extends ItemView {
     const host = this.containerEl;
     host.querySelector(".vp-celebrate")?.remove();
     // 带上 vp-root：设计令牌（颜色、阴影）都定义在它上面；层自己 position: fixed，盖在整个看板面板上
-    const layer = host.createDiv({ cls: "vp-celebrate vp-root", attr: { role: "status" } });
+    const layer = host.createDiv({ cls: `vp-celebrate vp-root ${this.themeCls()}`, attr: { role: "status" } });
     // 只盖住看得见的那部分（面板被滚出窗口的部分不算）
     const r = host.getBoundingClientRect();
     const win = host.ownerDocument.defaultView;
