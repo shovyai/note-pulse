@@ -6,6 +6,7 @@ import { L, LanguagePref, setLanguage } from "./i18n";
 import { Agenda, sanitizeAgenda } from "./agenda";
 import { ChartStyles, DEFAULT_CHART_STYLES, sanitizeChartStyles } from "./chart-styles";
 import { WidgetLayout, defaultLayout, normalizeLayout } from "./widgets";
+import { Appearance, DEFAULT_APPEARANCE } from "./appearance";
 
 export type HeatmapMode = "auto" | "mtime" | "delta";
 export type OutlierMode = "exclude" | "off";
@@ -58,6 +59,8 @@ export interface DashboardSettings {
   guideSeen: string;
   /** 各张图表选的画法（柱状 / 折线 / 曲线 / 面积 / 环形图 / 标签云……） */
   chartStyles: ChartStyles;
+  /** 外观：主题、背景、我的背景、卡片透明度（编辑看板 → 外观）。存在 data.json 里，随库同步；没有这个字段的旧设置读出来就是默认（见 src/appearance.ts） */
+  appearance: Appearance;
   autoRefresh: boolean;
   refreshDelaySec: number;
   openInNewTab: boolean;
@@ -107,6 +110,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   celebrated: [],
   guideSeen: "",
   chartStyles: { ...DEFAULT_CHART_STYLES },
+  appearance: DEFAULT_APPEARANCE,
   autoRefresh: true,
   refreshDelaySec: 3,
   openInNewTab: true,

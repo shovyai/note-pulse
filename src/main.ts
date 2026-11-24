@@ -2,6 +2,7 @@ import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, WorkspaceLeaf,
 import { DashboardSettings, DEFAULT_SETTINGS, DashboardSettingTab, SETTINGS_VERSION, migrateAlertSettings, migrateLanguage, migrateWritingSettings, normalizeFolder, splitList } from "./settings";
 import { ContentInfo, PersistentData, VaultStats, computeStats, includedFiles, syncContent, dayKey } from "./stats";
 import { DashboardView, VIEW_TYPE_PULSE, noticeError } from "./view";
+import { sanitizeAppearance } from "./appearance";
 import { ReportPreviewModal } from "./reports";
 import { ReportKind } from "./report-logic";
 import { WordPropsService } from "./wordprops";
@@ -201,6 +202,14 @@ export default class NotePulsePlugin extends Plugin {
   async onExternalSettingsChange() {
     const raw = (await this.loadData()) as Partial<SavedData> | null;
     if (raw?.devices && typeof raw.devices === "object") this.savedDevices = { ...this.savedDevices, ...raw.devices };
+    // 外观在别的设备上改了：直接换上（图片文件可能还没同步到，页面先退回主题底色，文件到了自动换上）
+    if (raw?.settings) {
+      const look = sanitizeAppearance(raw.settings.appearance);
+      if (JSON.stringify(look) !== JSON.stringify(this.settings.appearance)) {
+        this.settings.appearance = look;
+        for (const v of this.getViews()) v.applyLook();
+      }
+    }
     if (this.getViews().some((v) => v.isVisible())) void this.requestRefresh(false);
     else this.stale = true;
   }
@@ -538,6 +547,8 @@ export default class NotePulsePlugin extends Plugin {
     migrateWritingSettings(this.settings);
     migrateLanguage(this.settings, !!raw.settings, raw.settings?.settingsVersion ?? 1);
     migrateAlertSettings(this.settings, !!raw.settings, raw.settings?.settingsVersion ?? 1);
+    // 外观：没有这个字段（老设置）或者内容损坏、主题编号不认识，都读成默认；不升设置版本号
+    this.settings.appearance = sanitizeAppearance(raw.settings?.appearance);
     this.settings.settingsVersion = SETTINGS_VERSION;
 
     // 1.7.0：data.json 里的旧记录冻结为“1.7.0 之前”，本机的新增写自己的设备文件
