@@ -24,7 +24,7 @@ The UI is in English and Chinese and follows Obsidian's language (you can pick o
 | Panel | What it shows |
 | --- | --- |
 | Customizable workbench (2.0–2.1) | 12-column grid you arrange yourself: free placement (cards stay where you drop them; empty cells stay empty), hover-pause nudge when overlapping, Tidy up (整理) in the header to move cards up, with undo, resize, add/remove cards, keyboard, and mobile view-only stacking |
-| Appearance (unreleased) | In edit mode, the palette icon opens the same bottom sheet as "Add a card" with two sections. Background: follow the theme, gradient, paper, or up to 8 of your own colours (custom colour picker) and images (compressed to 1920 px and copied into `Note Pulse/backgrounds/` in your vault, so they sync); card opacity 0–100 % with a blur behind translucent cards. Theme: Default or Craft (warm paper, white cards, 16 px corners). The accent colour still follows Obsidian. Saved in `data.json`, applies on phones too; existing setups look exactly the same until you change something |
+| Appearance | In edit mode, the palette icon opens the same bottom sheet as "Add a card" with two sections. Background: follow the theme, gradient, paper, or up to 8 of your own colours (custom colour picker) and images (compressed to 1920 px and copied into `Note Pulse/backgrounds/` in your vault, so they sync); card opacity 0–100 % with a blur behind translucent cards. Theme: Default or Craft (warm paper, white cards, 16 px corners). The accent colour still follows Obsidian. Saved in `data.json`, applies on phones too; existing setups look exactly the same until you change something |
 | Headline | One sentence at the top: words written this week compared with the same days last week, your streak, today's goal and tasks due today |
 | Today's writing | Progress ring for today's words vs. your daily goal, current and longest streak, this week as dots or bars (switch on the card), weekly goal progress, and the notes you touched today |
 | Up next | Overdue tasks listed separately, then tasks due in the next 7 days; click to jump to the line. Understands `📅 YYYY-MM-DD` and `[due:: ]` as due dates (`⏳` is a scheduled date and is ignored); tasks overdue by more than 30 days are not shown as overdue; tasks in collection / clipping folders are not counted; `- [-]` counts as cancelled |
@@ -220,7 +220,7 @@ To release, run `npm version <patch|minor|major>` (updates `manifest.json` and `
 
 ## Changelog
 
-### Unreleased
+### 2.3.0
 
 - Appearance: a palette icon in the edit bar opens Background (follow theme, Gradient, Paper, up to 8 of your own colours and images, card opacity 0–100 %) and Theme (Default, Craft). Stored in `data.json`; existing setups look the same until you change something.
 
@@ -363,7 +363,7 @@ Note Pulse（笔记脉搏）是一个 Obsidian 插件，提供可自定义布局
 | 区块 | 内容 |
 | --- | --- |
 | 可自定义工作台（2.0–2.1） | 12 列网格自己排：自由摆放（卡片放哪就在哪，空位保持空着）、重叠时短暂停顿才让开、页头「整理」一键上浮并可撤销、调大小、增删卡片、键盘操作；手机只看不改 |
-| 外观（未发布） | 编辑看板时点调色盘图标，弹出和“添加卡片”同一块底部面板，分“背景”“主题”两类。背景：跟随主题、渐变、纸，或自己添加最多 8 个颜色（自画的取色界面）和图片（压缩到 1920 像素，复制进库里的 `Note Pulse/backgrounds/`，随库同步）；卡片透明度 0–100%，半透明时卡片后面加模糊。主题：默认、Craft（暖纸色、白卡、16px 圆角）。强调色仍跟随 Obsidian。存在 `data.json`，手机上同样生效；已有用户升级后外观不变 |
+| 外观 | 编辑看板时点调色盘图标，弹出和“添加卡片”同一块底部面板，分“背景”“主题”两类。背景：跟随主题、渐变、纸，或自己添加最多 8 个颜色（自画的取色界面）和图片（压缩到 1920 像素，复制进库里的 `Note Pulse/backgrounds/`，随库同步）；卡片透明度 0–100%，半透明时卡片后面加模糊。主题：默认、Craft（暖纸色、白卡、16px 圆角）。强调色仍跟随 Obsidian。存在 `data.json`，手机上同样生效；已有用户升级后外观不变 |
 | 页首一句话 | 本周写了多少、和上周同期比、连续写作天数、今天是否达标、今天到期的任务 |
 | 今日写作 | 今日字数与每日目标的进度环、当前与最长连续打卡、本周七天（圆点或柱状，卡片上切换）、每周目标进度、今天动过的笔记 |
 | 接下来 | 已逾期的任务单独列出，下面是 7 天内到期的；点击直接跳到任务所在行。识别 `📅 YYYY-MM-DD` 和 `[due:: ]` 作为截止日（`⏳` 是计划开始日，不算）；逾期超过 30 天的不再显示为已逾期；采集文件夹里的任务不计入；`- [-]` 视为已取消 |
@@ -496,7 +496,7 @@ views:
 
 ### 更新日志
 
-**未发布**
+**2.3.0**
 
 - 外观：编辑栏的调色盘图标打开“背景”（跟随主题、渐变、纸、最多 8 个自己添加的颜色和图片、卡片透明度 0–100%）和“主题”（默认、Craft）。存在 `data.json`；已有用户不改就和原来一样。
 
