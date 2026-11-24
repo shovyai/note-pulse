@@ -1,11 +1,27 @@
 /*
- * 2.0 新版本引导：升级后第一次打开看板时，一步一步带用户看一遍新功能（高亮真实的界面、自动进入编辑模式、点“下一步”继续）。
- * 这里只放纯数据和纯函数（步骤、提示卡该放在哪），不依赖 DOM，方便单元测试；画界面的部分在 tour.ts。
+ * 新手引导：第一次打开看板时，一步一步带用户看一遍（高亮真实的界面、自动进入编辑模式、点“下一步”继续）。
+ * 两套：完整引导（新装、从没看过引导的人，以及用命令、“更多”菜单、设置主动打开的）；
+ * 新增内容的短引导（看过旧版引导的老用户升级后自动看一次，只讲变了的地方）。
+ * 这里只放纯数据和纯函数（步骤、谁看哪套、提示卡该放在哪），不依赖 DOM，方便单元测试；画界面的部分在 tour.ts。
  */
 import { L } from "./i18n";
 
-/** 引导的版本：以后再有大改版，把它改成新的值，所有人会再看到一次引导 */
-export const GUIDE_VERSION = "2.0";
+/** 看过哪一版引导的记号（存在 data.json 的 guideSeen）。不必等于发版号。
+ * 以后界面再大改：改成新值，看过旧值的人会自动看一次短引导，内容在 tourSteps 的 news 里改 */
+export const GUIDE_VERSION = "2.2";
+
+/** full：完整引导；news：只讲新增和变了的地方 */
+export type TourKind = "full" | "news";
+
+/**
+ * 打开看板时该不该自动弹引导、弹哪套。seen 是 data.json 里记着看过的版本（空表示从没看过）。
+ * 看过旧版的老用户在手机和窄面板上不弹（短引导讲的都是电脑上的编辑工具），也不记成看过，等第一次在宽面板打开再弹。
+ */
+export function autoTourKind(seen: string, wide: boolean): TourKind | null {
+  if (seen === GUIDE_VERSION) return null;
+  if (seen === "") return "full";
+  return wide ? "news" : null;
+}
 
 /** 这一步需要看板处在什么状态：是否编辑模式、是否展开了“添加卡片”面板 */
 export interface TourState {
@@ -13,8 +29,8 @@ export interface TourState {
   addOpen: boolean;
 }
 
-/** 要高亮的界面元素，具体怎么找由 view 决定 */
-export type TourTarget = "greeting" | "alerts" | "editBtn" | "card" | "handle" | "switch" | "addBtn" | "addPanel" | "doneBtn" | "firstCard";
+/** 要高亮的界面元素，具体怎么找由 view 决定。tools 是页头里撤销、整理、更多这三个图标 */
+export type TourTarget = "greeting" | "alerts" | "editBtn" | "card" | "handle" | "switch" | "tools" | "addBtn" | "addPanel" | "doneBtn" | "firstCard";
 
 /** 这一步上演示的小动画：光标拖动卡片、拖角调大小、点切换按钮 */
 export type TourDemo = "drag" | "resize" | "click";
@@ -36,23 +52,9 @@ const EDIT: TourState = { editing: true, addOpen: false };
 const ADD: TourState = { editing: true, addOpen: true };
 
 /**
- * 所有步骤。wide 为 false（手机或窄面板）时看板只看不改，只讲看得到的部分，不进编辑模式。
+ * 所有步骤。wide 为 false（手机或窄面板）时看板只看不改，只讲看得到的部分，不进编辑模式；两套在窄面板上一样。
  */
-export function tourSteps(wide: boolean): TourStep[] {
-  const welcome: TourStep = {
-    id: "welcome",
-    title: L("欢迎来到 Note Pulse 2.0", "Welcome to Note Pulse 2.0"),
-    body: wide
-      ? L(
-          "这一版的看板可以自己摆：要哪些卡片、放在哪、多大，都由你定。还新增了日历、目标进度、最近编辑等卡片，把相关的数据合成了带标签页的卡片，图表也能换画法。花一分钟，跟着看一遍怎么用。",
-          "The dashboard is now yours to arrange: pick the cards, where they go and how big. There are new cards (calendar, goals, recent edits), combined cards with tabs, and charts you can restyle. Take a minute to see how it works."
-        )
-      : L(
-          "这一版的看板有了新的卡片、问候和提醒，图表也能换画法。手机和窄面板上只看不改，布局会跟着电脑上摆好的走。花一分钟看看有什么新东西。",
-          "The dashboard has new cards, a greeting and reminders, and charts you can restyle. On phones and narrow panes it is view-only and follows the layout you arranged on a computer. Take a minute to see what is new."
-        ),
-    state: VIEW,
-  };
+export function tourSteps(wide: boolean, kind: TourKind = "full"): TourStep[] {
   const greeting: TourStep = {
     id: "greeting",
     title: L("页首的问候", "The greeting"),
@@ -63,30 +65,98 @@ export function tourSteps(wide: boolean): TourStep[] {
   const alerts: TourStep = {
     id: "alerts",
     title: L("醒目的提醒", "Reminders"),
-    body: L("任务逾期（红）、今天到期（橙）、今晚还没打卡（橙）、本周目标还差多少（紫），都做成色块放在这里。点一下，直接跳到相关的卡片。", "Overdue tasks (red), tasks due today (orange), a streak about to break (orange) and the weekly goal (purple) show up here. Click one to jump to the card."),
+    body: L(
+      "任务逾期（红）、今天到期（橙）、连续打卡快断了（橙）、本周目标还差多少（紫），做成色块放在这里，点一下跳到相关的卡片。每种提醒都能在设置的“打卡与热力图”里单独开关。",
+      "Overdue tasks (red), tasks due today (orange), a streak about to break (orange) and a weekly goal still short (purple) show up here as coloured blocks. Click one to jump to the card. Each kind can be turned on or off in Settings under “Streak and heatmap”."
+    ),
     target: "alerts",
     optional: true,
     state: VIEW,
   };
-  const cards: TourStep = {
-    id: "cards",
-    title: L("卡片", "Cards"),
-    body: L("每张卡片大小不同，显示的内容跟着变：小的只有数字，大的有图表和细节。列表放不下的会折成“还有 N 个”，点开可以在卡片里滚动。", "Cards differ in size and show more as they grow: small ones just a number, big ones charts and details. Lists that do not fit fold into “N more”."),
-    target: "firstCard",
-    optional: true,
-    state: VIEW,
-  };
-  const finish: TourStep = {
-    id: "finish",
-    title: wide ? L("都看完了", "All done") : L("开始使用吧", "You are all set"),
-    body: wide
-      ? L("想再看一遍：在命令面板里搜“新手引导”，或者进入编辑后点编辑栏里的“新手引导”。祝写得开心。", "To see this again, search “guide” in the command palette, or click “Guide” in the edit bar while editing. Happy writing.")
-      : L("想再看一遍：在命令面板里搜“新手引导”。要摆卡片，请在电脑上操作，手机会自动同步。", "To see this again, search “guide” in the command palette. To arrange cards, use a computer; your phone follows automatically."),
-    state: VIEW,
-  };
-  if (!wide) return [welcome, greeting, alerts, cards, finish];
+
+  if (!wide) {
+    return [
+      {
+        id: "welcome",
+        title: L("欢迎来到 Note Pulse", "Welcome to Note Pulse"),
+        body: L(
+          "看板上有卡片、问候和提醒，图表也能换画法。手机和窄面板上只看不改，布局跟着电脑上摆好的走。花一分钟看看。",
+          "The dashboard has cards, a greeting and reminders, and charts you can restyle. On phones and narrow panes it is view-only and follows the layout you arranged on a computer. Take a minute to look around."
+        ),
+        state: VIEW,
+      },
+      greeting,
+      alerts,
+      {
+        id: "cards",
+        title: L("卡片", "Cards"),
+        body: L("每张卡片大小不同，显示的内容跟着变：小的只有数字，大的有图表和细节。列表放不下的会折成“还有 N 个”，点开可以在卡片里滚动。", "Cards differ in size and show more as they grow: small ones just a number, big ones charts and details. Lists that do not fit fold into “N more”."),
+        target: "firstCard",
+        optional: true,
+        state: VIEW,
+      },
+      {
+        id: "finish",
+        title: L("开始使用吧", "You are all set"),
+        body: L("想再看一遍：在命令面板里搜“新手引导”。要摆卡片，请在电脑上操作，手机会自动同步。", "To see this again, search “guide” in the command palette. To arrange cards, use a computer; your phone follows automatically."),
+        state: VIEW,
+      },
+    ];
+  }
+
+  const again = L("在命令面板里搜“新手引导”，或者编辑时点页头的“更多”，再点“新手引导”。", "search “guide” in the command palette, or while editing open “More” in the header and choose “Guide”.");
+  const tools = (lead: string, leadEn: string): TourStep => ({
+    id: "tools",
+    title: L("页头的编辑工具", "Edit tools in the header"),
+    body: L(`${lead}撤销、整理（把卡片往上补齐空位），以及“更多”，里面有恢复默认布局和新手引导。`, `${leadEn}undo, tidy up (moves cards up to fill gaps), and “More”, which holds Restore default and the guide.`),
+    target: "tools",
+    state: EDIT,
+  });
+  const library = (body: string, bodyEn: string): TourStep => ({
+    id: "library",
+    title: kind === "news" ? L("添加卡片", "Add cards") : L("挑一张卡片", "Pick a card"),
+    body: L(body, bodyEn),
+    target: "addPanel",
+    state: ADD,
+  });
+
+  if (kind === "news") {
+    return [
+      {
+        id: "news",
+        title: L("编辑看板换了样子", "Editing has a new look"),
+        body: L("编辑工具搬进了页头，添加卡片换成从底部弹起的面板。花半分钟看一下。", "The edit tools now live in the header, and adding cards opens a panel from the bottom. Take half a minute to see."),
+        state: VIEW,
+      },
+      alerts,
+      tools("点铅笔进入编辑后，页头的按钮换成编辑工具：", "After you click the pencil, the header buttons turn into edit tools: "),
+      library(
+        "点页头的“添加卡片”，面板从底部弹起，按主题分类，每张卡都是真实的预览。点一下添加，再点一下取消；也可以直接拖到看板上想放的位置。",
+        "Click “Add a card” in the header and a panel slides up from the bottom, sorted by topic, with a live preview of every card. Click one to add it, click again to remove it, or drag it where you want it on the dashboard."
+      ),
+      {
+        id: "done",
+        title: L("改完点“完成”", "Click Done when finished"),
+        body: L("“完成”在页头最右，点了回到平时的看板。改动自动保存，并随库同步到你的其他设备。", "Done sits at the far right of the header and takes you back to the dashboard. Changes are saved automatically and sync across your devices."),
+        target: "doneBtn",
+        state: EDIT,
+      },
+      {
+        id: "finish",
+        title: L("就这些", "That is all"),
+        body: L(`想看完整的引导：${again}`, `For the full guide, ${again}`),
+        state: VIEW,
+      },
+    ];
+  }
+
   return [
-    welcome,
+    {
+      id: "welcome",
+      title: L("欢迎来到 Note Pulse", "Welcome to Note Pulse"),
+      body: L("看板可以自己摆：要哪些卡片、放在哪、多大，都由你定。花一分钟，跟着看一遍怎么用。", "The dashboard is yours to arrange: pick the cards, where they go and how big. Take a minute to see how it works."),
+      state: VIEW,
+    },
     greeting,
     alerts,
     {
@@ -100,8 +170,8 @@ export function tourSteps(wide: boolean): TourStep[] {
       id: "drag",
       title: L("拖动卡片换位置", "Drag a card to move it"),
       body: L(
-        "按住卡片拖到想放的位置，落在哪就是哪，虚线框是松手后的位置；压住的卡片会就近让开。留下的空位不会自动补上，想排整齐就点编辑栏里的“整理”。按 Esc 取消，Cmd / Ctrl + Z 撤销，也可以用方向键移动。",
-        "Drag a card where you want it; it lands exactly where the dashed frame shows, and cards underneath step aside. Gaps are not filled automatically; click “Tidy up” in the edit bar to close them. Esc cancels, Cmd / Ctrl + Z undoes, arrow keys work too."
+        "按住卡片拖到想放的位置，落在哪就是哪，虚线框是松手后的位置；压住的卡片会就近让开。留下的空位不会自动补上，想排整齐就点页头的“整理”。按 Esc 取消，Cmd / Ctrl + Z 撤销，也可以用方向键移动。",
+        "Drag a card where you want it; it lands exactly where the dashed frame shows, and cards underneath step aside. Gaps are not filled automatically; click “Tidy up” in the header to close them. Esc cancels, Cmd / Ctrl + Z undoes, arrow keys work too."
       ),
       target: "card",
       state: EDIT,
@@ -124,20 +194,18 @@ export function tourSteps(wide: boolean): TourStep[] {
       state: EDIT,
       demo: "click",
     },
+    tools("进入编辑后，页头换成编辑工具：", "While editing, the header shows the edit tools: "),
     {
       id: "add",
       title: L("添加更多卡片", "Add more cards"),
-      body: L("点“添加卡片”，打开卡片库。点“下一步”，我带你看。", "Click “Add a card” to open the card library. Press Next to look inside."),
+      body: L("点“添加卡片”，面板从底部弹起。点“下一步”，我带你看。", "Click “Add a card” and a panel slides up from the bottom. Press Next to look inside."),
       target: "addBtn",
       state: EDIT,
     },
-    {
-      id: "library",
-      title: L("挑一张卡片", "Pick a card"),
-      body: L("卡片按分类列出，每张都有缩略图。带“合并卡”标记的，把几张相关的卡片合成了一张带标签页的卡片。灰色的已经在看板上，点一下能找到它。点卡片加到最后，也可以直接拖到看板上想放的位置。", "Cards are listed by category with a thumbnail each. “Combined” cards merge several related cards into one with tabs. Grey ones are already on the dashboard; click one to find it. Click a card to add it at the end, or drag it where you want it."),
-      target: "addPanel",
-      state: ADD,
-    },
+    library(
+      "面板按主题分类，每张卡都是真实的预览。点一下添加，加好的会有强调，再点一下取消；也可以直接拖到看板上想放的位置。大小拖卡片右下角调。",
+      "The panel is sorted by topic, with a live preview of every card. Click one to add it; added cards are highlighted, and clicking again removes it. You can also drag a card where you want it, and resize it by its corner."
+    ),
     {
       id: "done",
       title: L("改完点“完成”", "Click Done when finished"),
@@ -145,7 +213,12 @@ export function tourSteps(wide: boolean): TourStep[] {
       target: "doneBtn",
       state: EDIT,
     },
-    finish,
+    {
+      id: "finish",
+      title: L("都看完了", "All done"),
+      body: L(`想再看一遍：${again}祝写得开心。`, `To see this again, ${again} Happy writing.`),
+      state: VIEW,
+    },
   ];
 }
 
@@ -192,3 +265,4 @@ export function visibleRect(r: Rect, vp: { w: number; h: number }): Rect {
   const bottom = clampN(r.y + r.h, 0, vp.h);
   return { x, y, w: Math.max(0, right - x), h: Math.max(0, bottom - y) };
 }
+

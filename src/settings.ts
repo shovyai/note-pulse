@@ -12,7 +12,7 @@ export type OutlierMode = "exclude" | "off";
 export type WeekStyle = "dots" | "bars" | "line";
 
 /** 设置结构版本：用于一次性迁移旧设置 */
-export const SETTINGS_VERSION = 6;
+export const SETTINGS_VERSION = 7;
 
 export interface DashboardSettings {
   settingsVersion: number;
@@ -34,6 +34,10 @@ export interface DashboardSettings {
   createdFields: string;
   dailyWordGoal: number;
   weeklyWordGoal: number;
+  /** 页首提醒色块：任务逾期和到期、连续打卡快断了、本周目标快到期，各一个开关 */
+  alertTasks: boolean;
+  alertStreak: boolean;
+  alertWeekly: boolean;
   reportFolder: string;
   /** 写作回顾卡片共享的展开状态，沿用旧周报字段。 */
   reportWeekExpanded: boolean;
@@ -90,6 +94,9 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   createdFields: "created, 创建时间, date",
   dailyWordGoal: 300,
   weeklyWordGoal: 1500,
+  alertTasks: true,
+  alertStreak: false,
+  alertWeekly: false,
   reportFolder: "Note Pulse",
   reportWeekExpanded: false,
   heatmapMode: "auto",
@@ -192,8 +199,8 @@ export class DashboardSettingTab extends PluginSettingTab {
           {
             name: L("孤立笔记不检查的文件夹", "Folders skipped for orphans"),
             desc: L(
-              "库体检不把这些文件夹里没有链接的笔记算作孤立笔记，比如日记、对话记录。采集文件夹自动不检查。每行一个，或用逗号分隔。",
-              "Vault checkup doesn't count unlinked notes in these folders as orphans, for example daily notes or chat logs. Clipping folders are skipped automatically. One per line or comma-separated."
+              "库体检不把这些文件夹里没有链接的笔记算作孤立笔记，比如对话记录。采集文件夹和以 YYYY-MM-DD 命名的日记自动不检查。每行一个，或用逗号分隔。",
+              "Vault checkup doesn't count unlinked notes in these folders as orphans, for example chat logs. Clipping folders and notes named YYYY-MM-DD (daily notes) are skipped automatically. One per line or comma-separated."
             ),
             render: (setting) =>
               setting.addTextArea((t) => {
@@ -273,6 +280,36 @@ export class DashboardSettingTab extends PluginSettingTab {
             ),
           },
           {
+            name: L("任务到期提醒", "Task reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertTasks).onChange(async (v) => {
+                  st.alertTasks = v;
+                  await save();
+                })
+              ),
+          },
+          {
+            name: L("连续打卡提醒", "Streak reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertStreak).onChange(async (v) => {
+                  st.alertStreak = v;
+                  await save();
+                })
+              ),
+          },
+          {
+            name: L("周目标提醒", "Weekly goal reminders"),
+            render: (setting) =>
+              setting.addToggle((t) =>
+                t.setValue(st.alertWeekly).onChange(async (v) => {
+                  st.alertWeekly = v;
+                  await save();
+                })
+              ),
+          },
+          {
             name: L("写作报告保存位置", "Writing report folder"),
             desc: L("周报和月报保存在这个文件夹，默认 Note Pulse。留空保存在笔记库最外层。", "Weekly and monthly reports are saved here, default Note Pulse. Leave empty to save at the top of the vault."),
             render: (setting) => setting.addText((t) =>
@@ -319,7 +356,6 @@ export class DashboardSettingTab extends PluginSettingTab {
           },
           {
             name: L("新手引导", "Guide"),
-            desc: L("一步一步看看 2.0 的新功能：编辑看板、拖动和调大小、切换图的样子、添加卡片。升级后第一次打开看板会自动出现一次。", "A step-by-step look at what is new in 2.0: editing the dashboard, dragging and resizing, switching chart styles, adding cards. It appears once automatically after upgrading."),
             render: (setting) => setting.addButton((b) => b.setButtonText(L("查看", "Show")).onClick(() => void this.plugin.showGuide())),
           },
           {
@@ -736,4 +772,20 @@ export function migrateLanguage(settings: DashboardSettings, _hadSettings: boole
   if (savedVersion < 5) settings.language = "auto";
   if (settings.language !== "auto" && settings.language !== "zh" && settings.language !== "en") settings.language = "auto";
   setLanguage(settings.language);
+}
+
+/**
+ * 设置版本 7 加入三种提醒的开关。已经保存过设置的老用户（版本低于 7）保持原样，三种都开；
+ * 全新安装用新默认：只开任务到期提醒。版本 7 之后用户自己的选择保留，读到非布尔值回到默认。
+ */
+export function migrateAlertSettings(settings: DashboardSettings, hadSettings: boolean, savedVersion: number): void {
+  if (hadSettings && savedVersion < 7) {
+    settings.alertTasks = true;
+    settings.alertStreak = true;
+    settings.alertWeekly = true;
+    return;
+  }
+  if (typeof settings.alertTasks !== "boolean") settings.alertTasks = DEFAULT_SETTINGS.alertTasks;
+  if (typeof settings.alertStreak !== "boolean") settings.alertStreak = DEFAULT_SETTINGS.alertStreak;
+  if (typeof settings.alertWeekly !== "boolean") settings.alertWeekly = DEFAULT_SETTINGS.alertWeekly;
 }

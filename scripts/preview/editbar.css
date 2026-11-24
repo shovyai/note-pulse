@@ -1,0 +1,246 @@
+/* 编辑栏重做原型的样式。只用于预览，不进插件；定稿后再搬进 styles.css。
+ * 现状一栏用真实的 .vp-editbar 样式；新方案的编辑工具并入页头。 */
+body {
+  margin: 0;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+.ep-switch {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 8px 16px;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.ep-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ep-group button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.ep-group button.is-on {
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  color: var(--text-normal);
+}
+.ep-frame {
+  margin: 0 auto;
+  transition: width 0.2s ease;
+}
+.ep-frame.is-wide {
+  width: min(1100px, 100%);
+}
+.ep-frame.is-narrow {
+  width: 700px;
+  max-width: 100%;
+}
+.ep-frame .vp-root {
+  min-height: calc(100vh - 44px);
+}
+/* 示意用的卡片：只占位，让页面有高度，滚动时看得到页头滚走 */
+.ep-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--vp-s4);
+}
+.ep-card {
+  grid-column: span 4;
+  min-height: 190px;
+  border: 1px solid var(--vp-border);
+  border-radius: var(--vp-r-m);
+  background: var(--vp-surface);
+  box-shadow: var(--vp-shadow-raise);
+}
+.ep-card.is-wide {
+  grid-column: span 8;
+}
+.ep-frame.is-narrow .ep-card,
+.ep-frame.is-narrow .ep-card.is-wide {
+  grid-column: span 12;
+}
+.ep-card.is-edit {
+  outline: 1px dashed color-mix(in srgb, var(--vp-accent) 45%, transparent);
+  outline-offset: -1px;
+}
+
+/* ---------- 新方案：编辑工具并入页头 ---------- */
+.ep-edit .vp-header {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ep-edit .vp-header-actions {
+  margin-top: 0;
+  margin-left: auto;
+}
+.ep-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--vp-s1);
+}
+.ep-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--vp-s2);
+  background: var(--vp-line-strong);
+}
+/* 纯图标层：不要边框和白底，静止时只是一个图标，悬停才出底色 */
+.vp-root .vp-shell .ep-tools .vp-icon-btn {
+  position: relative;
+  border-color: transparent;
+  background: transparent;
+}
+.vp-root .vp-shell .ep-tools .vp-icon-btn:hover:not(:disabled),
+.vp-root .vp-shell .ep-tools .vp-icon-btn.is-open {
+  color: var(--text-normal);
+  background: color-mix(in srgb, var(--vp-accent) 9%, transparent);
+}
+.ep-tools .vp-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* 突出层：添加卡片（淡色底）、完成（实心）。高度和图标按钮一样是 30px，同一条水平线 */
+.vp-root .vp-shell .ep-tools .vp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px 0 11px;
+}
+.vp-root .vp-shell .ep-tools .vp-btn.is-soft {
+  border-color: color-mix(in srgb, var(--vp-accent) 32%, transparent);
+  background: var(--vp-accent-soft);
+  color: var(--vp-accent-ink);
+}
+.vp-root .vp-shell .ep-tools .vp-btn.is-soft:hover {
+  background: color-mix(in srgb, var(--vp-accent) 18%, transparent);
+}
+.ep-tools .vp-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.ep-tools .vp-btn + .vp-btn {
+  margin-left: var(--vp-s1);
+}
+/* 悬停时才出现的名字：不是说明，只是按钮叫什么 */
+.ep-tools [data-tip]::after {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 20;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--text-normal);
+  color: var(--background-primary);
+  font-size: var(--vp-fs-12);
+  white-space: nowrap;
+  content: attr(data-tip);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -2px);
+  transition: opacity 0.12s ease 0s, transform 0.12s ease 0s;
+}
+.ep-tools [data-tip]:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.35s;
+}
+.ep-tools .is-open[data-tip]::after {
+  display: none;
+}
+/* “更多”菜单：自画，不用系统菜单 */
+.ep-more {
+  position: relative;
+}
+.ep-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 168px;
+  padding: 4px;
+  border: 1px solid var(--vp-border);
+  border-radius: var(--vp-r-m);
+  background: var(--vp-surface);
+  box-shadow: var(--vp-shadow-pop);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.ep-menu.is-open {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+.vp-motion .ep-menu {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease), visibility 0s var(--vp-t-fast);
+}
+.vp-motion .ep-menu.is-open {
+  transition: opacity var(--vp-t-fast) var(--vp-ease), transform var(--vp-t-fast) var(--vp-ease), visibility 0s;
+}
+.ep-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--vp-r-s);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: var(--vp-fs-13);
+  text-align: left;
+  cursor: pointer;
+}
+.vp-root .vp-shell .ep-item {
+  border: 0;
+  box-shadow: none;
+}
+.ep-item svg {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+}
+.ep-item:hover,
+.ep-item:focus-visible {
+  background: color-mix(in srgb, var(--vp-accent) 9%, transparent);
+  outline: none;
+}
+/* 进入编辑：工具从右往左依次滑入；关了动效或系统减弱动态时直接到位 */
+@keyframes ep-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+.vp-motion.ep-enter .ep-tools > * {
+  animation: ep-in var(--vp-t-base) var(--vp-ease) backwards;
+}
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(1) { animation-delay: 0ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(2) { animation-delay: 20ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(3) { animation-delay: 40ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(4) { animation-delay: 60ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(5) { animation-delay: 80ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(6) { animation-delay: 100ms; }
+.vp-motion.ep-enter .ep-tools > *:nth-last-child(7) { animation-delay: 120ms; }
+@media (prefers-reduced-motion: reduce) {
+  .vp-motion.ep-enter .ep-tools > * {
+    animation: none;
+  }
+  .vp-motion .ep-menu,
+  .vp-motion .ep-menu.is-open {
+    transition: none;
+  }
+}

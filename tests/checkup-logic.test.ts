@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { baseName, inFolders, linkText, looseKey, rewriteLinks, sameNameGroups, suggestTarget, unusedAttachments } from "../src/checkup-logic";
+import { baseName, inFolders, isAttachment, isDailyNote, linkText, looseKey, rewriteLinks, sameNameGroups, suggestTarget, unusedAttachments } from "../src/checkup-logic";
 
 const notes = [
   "Claude code常用指令/Claude Code 使用指南（新版）.md",
@@ -79,9 +79,24 @@ test("同名笔记分组", () => {
   ]);
 });
 
-test("未引用的附件：只看附件类型，被链接过的不算", () => {
-  const files = ["a/图.png", "a/用了.png", "笔记.md", "数据.canvas", "x/文档.pdf", "安全/key.txt"];
-  assert.deepEqual(unusedAttachments(files, new Set(["a/用了.png"])), ["a/图.png", "x/文档.pdf", "安全/key.txt"]);
+test("未引用的附件：只看图片、PDF、音视频，被链接过的不算", () => {
+  const files = ["a/图.png", "a/用了.png", "笔记.md", "数据.canvas", "x/文档.pdf", "x/录音.m4a", "x/片.mp4"];
+  assert.deepEqual(unusedAttachments(files, new Set(["a/用了.png"])), ["a/图.png", "x/录音.m4a", "x/文档.pdf", "x/片.mp4"]);
+});
+
+test("文本、表格、Office 文件和压缩包不算附件，不会被当成可清理的", () => {
+  const files = ["安全/key.txt", "数据.csv", "报告.docx", "报告.doc", "表.xlsx", "幻灯.pptx", "备份.zip"];
+  assert.deepEqual(unusedAttachments(files, new Set()), []);
+  for (const f of files) assert.equal(isAttachment(f), false);
+});
+
+test("日记：YYYY-MM-DD 命名的笔记，不看文件夹", () => {
+  assert.equal(isDailyNote("日记/2026-10-23.md"), true);
+  assert.equal(isDailyNote("2026-10-23.md"), true);
+  assert.equal(isDailyNote("a/b/2026-1-3.md"), false);
+  assert.equal(isDailyNote("日记/2026-10-23 复盘.md"), false);
+  assert.equal(isDailyNote("日记/2026-13-40.md"), false);
+  assert.equal(isDailyNote("a/笔记.md"), false);
 });
 
 test("文件夹过滤含子文件夹，不误伤同前缀的文件夹", () => {

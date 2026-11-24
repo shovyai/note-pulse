@@ -22,9 +22,37 @@ function ctx(over: Partial<DayContext> = {}, hour = 15, day = 21): DayContext {
     overdue: 0,
     dueToday: 0,
     dueTomorrow: 0,
+    showTaskAlerts: true,
+    showStreakAlerts: true,
+    showWeeklyAlerts: true,
     ...over,
   };
 }
+
+test("提醒开关：任务、连续打卡、周目标各管各的，关掉的不出色块", () => {
+  const busy = { overdue: 2, dueToday: 1, dueTomorrow: 3, streak: 4, weekWords: 100 };
+  const kinds = (o: Partial<DayContext>) => computeAlerts(ctx({ ...busy, ...o }, 19, 25)).map((a) => a.kind);
+  assert.deepEqual(kinds({}), ["overdue", "dueToday", "streak", "dueTomorrow", "weekly"]);
+  assert.deepEqual(kinds({ showTaskAlerts: false }), ["streak", "weekly"]);
+  assert.deepEqual(kinds({ showStreakAlerts: false }), ["overdue", "dueToday", "dueTomorrow", "weekly"]);
+  assert.deepEqual(kinds({ showWeeklyAlerts: false }), ["overdue", "dueToday", "streak", "dueTomorrow"]);
+  assert.deepEqual(kinds({ showTaskAlerts: false, showStreakAlerts: false, showWeeklyAlerts: false }), []);
+});
+
+test("连续打卡提醒关掉后：问候语不再说保住连续，心情按没有连续处理", () => {
+  const c = ctx({ streak: 5, todayWords: 120, showStreakAlerts: false }, 20);
+  assert.equal(mood(c), "push");
+  assert.ok(!/连续/.test(greetingTitle(c, zh)));
+  assert.ok(!/streak/i.test(greetingTitle(c, en)));
+  assert.equal(mood(ctx({ streak: 5, showStreakAlerts: false }, 15)), "start");
+  // 开着时照旧
+  assert.equal(mood(ctx({ streak: 5, todayWords: 100 }, 20)), "risk");
+});
+
+test("关掉提醒不影响庆祝：连续打卡里程碑照常达成", () => {
+  const c = ctx({ streak: 7, streakStart: "2026-10-15", todayDone: true, todayWords: 400, showStreakAlerts: false });
+  assert.ok(achievements(c, new Set()).some((a) => a.kind === "streak"));
+});
 
 test("一天里的时段和问候语", () => {
   assert.equal(dayPart(3), "night");

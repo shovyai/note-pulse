@@ -1,5 +1,5 @@
 import { Notice, Platform, Plugin, TAbstractFile, TFile, TFolder, WorkspaceLeaf, debounce, Debouncer, normalizePath } from "obsidian";
-import { DashboardSettings, DEFAULT_SETTINGS, DashboardSettingTab, SETTINGS_VERSION, migrateLanguage, migrateWritingSettings, normalizeFolder, splitList } from "./settings";
+import { DashboardSettings, DEFAULT_SETTINGS, DashboardSettingTab, SETTINGS_VERSION, migrateAlertSettings, migrateLanguage, migrateWritingSettings, normalizeFolder, splitList } from "./settings";
 import { ContentInfo, PersistentData, VaultStats, computeStats, includedFiles, syncContent, dayKey } from "./stats";
 import { DashboardView, VIEW_TYPE_PULSE, noticeError } from "./view";
 import { ReportPreviewModal } from "./reports";
@@ -97,7 +97,7 @@ export default class NotePulsePlugin extends Plugin {
     });
     this.addCommand({
       id: "show-guide",
-      name: L("查看 2.0 新手引导", "Show the 2.0 guide"),
+      name: L("查看新手引导", "Show the guide"),
       callback: () => void this.showGuide(),
     });
     this.addCommand({
@@ -537,6 +537,7 @@ export default class NotePulsePlugin extends Plugin {
     }
     migrateWritingSettings(this.settings);
     migrateLanguage(this.settings, !!raw.settings, raw.settings?.settingsVersion ?? 1);
+    migrateAlertSettings(this.settings, !!raw.settings, raw.settings?.settingsVersion ?? 1);
     this.settings.settingsVersion = SETTINGS_VERSION;
 
     // 1.7.0：data.json 里的旧记录冻结为“1.7.0 之前”，本机的新增写自己的设备文件

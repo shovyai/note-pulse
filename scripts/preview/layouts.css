@@ -1,0 +1,225 @@
+/* 排版方案原型的样式：只管卡片怎么排，卡片本身的样式全部来自 styles.css */
+body.lx-page {
+  margin: 0;
+  background: var(--background-primary);
+}
+.lx-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 24px;
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font: 12px/1.4 var(--font-interface);
+}
+.lx-nav-item {
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.lx-nav-item.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+.lx-idea {
+  max-width: 1312px;
+  margin: 12px auto 0;
+  padding: 0 24px;
+  font: 13px/1.5 var(--font-interface);
+  color: var(--text-muted);
+}
+
+.lx-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.lx-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+.lx-grid.lx-top {
+  align-items: start;
+}
+.lx-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+/* 叠起来的卡片平分多出来的高度，不让最后一张独自空一大块 */
+.lx-stack > * {
+  flex: 1 1 auto;
+}
+.lx-stack.is-loose > * {
+  flex: 0 0 auto;
+}
+.lx-stack > .vp-card {
+  grid-column: auto !important;
+}
+.lx-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* 1 分区标题 */
+.lx-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lx-section + .lx-section,
+.lx-grid + .lx-section,
+.lx-section + .lx-grid {
+  margin-top: 16px;
+}
+.lx-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-normal);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.lx-section-note {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* 4 瀑布流 */
+.lx-masonry {
+  columns: 3;
+  column-gap: 16px;
+}
+.lx-masonry > .vp-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
+}
+
+/* 5 标签页 */
+.lx-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  width: fit-content;
+  border-radius: 10px;
+  background: var(--background-secondary);
+}
+.lx-tab {
+  padding: 6px 18px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.lx-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+.lx-pane.is-hidden {
+  display: none;
+}
+
+/* 6 单列 */
+.lx-root.is-narrow {
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+}
+.lx-page:has(.lx-root.is-narrow) .vp-headline {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 7 时间轴 */
+.lx-root.is-timeline {
+  gap: 28px;
+}
+.lx-band {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 20px;
+}
+.lx-band-label {
+  position: sticky;
+  top: 52px;
+  align-self: start;
+  padding: 6px 0 6px 14px;
+  border-left: 3px solid var(--interactive-accent);
+}
+.lx-band-name {
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--text-normal);
+}
+.lx-band-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* 8 紧凑 */
+.lx-root.is-compact,
+.lx-root.is-compact .lx-grid {
+  gap: 10px;
+}
+.lx-root.is-compact .vp-card {
+  padding: 14px 16px;
+}
+.lx-root.is-compact .vp-hero {
+  padding: 16px 20px;
+}
+
+/* 10 指标清单：一张卡变成一行，标题在左，内容在右 */
+.lx-rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--vp-border);
+  border-radius: 12px;
+  background: var(--vp-surface);
+  overflow: hidden;
+}
+.lx-rows > .vp-card.lx-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 14px 22px;
+}
+.lx-rows > .vp-card.lx-row + .vp-card.lx-row {
+  border-top: 1px solid var(--vp-line);
+}
+.lx-rows > .lx-row > .vp-card-head {
+  flex: 0 0 180px;
+  margin: 0;
+}
+.lx-rows > .lx-row > .vp-card-body,
+.lx-rows > .lx-row > :not(.vp-card-head) {
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-missing {
+  padding: 12px;
+  color: var(--text-error);
+}
