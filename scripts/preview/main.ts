@@ -14,7 +14,7 @@ const dedupe = {
   openReport: async () => undefined, startCleanup: () => undefined,
 };
 const app = {
-  vault: { getName: () => "我的知识库", getMarkdownFiles: () => [], getAbstractFileByPath: (p: string) => mk(p, 0) },
+  vault: { getName: () => "我的知识库", getMarkdownFiles: () => [], getAbstractFileByPath: (p: string) => mk(p, 0), on: () => ({}) },
   metadataCache: { getFileCache: () => null },
   workspace: { openLinkText: async () => undefined, on: () => ({}) },
   fileManager: { trashFile: async () => undefined },
