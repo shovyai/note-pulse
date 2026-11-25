@@ -36,6 +36,18 @@ export const rowsToPx = (h: number): number => ROW_H * h + GAP * (h - 1);
 /** n 格占多少像素（unit = 一格加一条间隙） */
 export const cellsToPx = (n: number, unit: number): number => n * unit - GAP;
 
+/**
+ * 软吸附：卡片平滑跟着指针，靠近格子中心时被拉向目标格子（snapped），越靠近格子边界拉力越小，到边界处等于指针位置。
+ * 所以跨过格子边界时，两边算出来的大小相同，卡片不会跳一格；指针每动 1px，卡片最多动约 2px，而且只增不减。
+ * 指针偏差最多算半格：超过最大尺寸继续往外拖，卡片停在最大尺寸外半格处。
+ */
+export const magnetPx = (raw: number, snapped: number, unit: number, pull = 0.35): number => {
+  const half = unit / 2;
+  const dev = Math.max(-half, Math.min(half, raw - snapped));
+  const t = Math.abs(dev) / half;
+  return snapped + dev * (pull + (1 - pull) * t * t);
+};
+
 /** 多少像素对应几格，四舍五入 */
 export const pxToCells = (px: number, unit: number): number => Math.round((px + GAP) / unit);
 

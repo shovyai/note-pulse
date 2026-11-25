@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { COLS, GAP, GridItem, Limits, ROW_H, addItem, displacedCount, compact, findSpot, flowItems, growItem, moveItem, moveItemSnap, nudgeItem, overlap, placeItem, placeItemSnap, removeItem, repairItems, cellsToPx, pxToCells, resizeItem, rowsToPx, sizeRange } from "../src/grid";
+import { COLS, GAP, GridItem, Limits, ROW_H, addItem, displacedCount, compact, findSpot, flowItems, growItem, moveItem, moveItemSnap, nudgeItem, overlap, placeItem, placeItemSnap, removeItem, repairItems, cellsToPx, magnetPx, pxToCells, resizeItem, rowsToPx, sizeRange } from "../src/grid";
 
 const LIM: Limits = { minW: 2, maxW: 12, minH: 2, maxH: 10 };
 const limitsOf = (id: string): Limits => (id.startsWith("n") ? { minW: 2, maxW: 4, minH: 2, maxH: 4 } : LIM);
@@ -369,4 +369,33 @@ test("像素和格子互换：n 格 = n × 单位 − 间隙；半格以内四�
   assert.equal(pxToCells(cellsToPx(4, unit), unit), 4);
   assert.equal(pxToCells(cellsToPx(4, unit) + unit * 0.49, unit), 4, "不到半格：还是 4 格");
   assert.equal(pxToCells(cellsToPx(4, unit) + unit * 0.51, unit), 5, "过了半格：5 格");
+});
+
+test("软吸附：平滑跟手、靠近格子中心被拉向目标；跨过格子边界时不跳（两边算出来一样）；单调；跑出最大尺寸时封顶", () => {
+  const unit = ROW_H + GAP;
+  const snap = (n: number) => cellsToPx(n, unit);
+  const at = (raw: number) => magnetPx(raw, snap(pxToCells(raw, unit)), unit);
+  assert.equal(magnetPx(snap(4), snap(4), unit), snap(4), "正好在格子上：不偏");
+  const near = magnetPx(snap(4) + unit * 0.2, snap(4), unit);
+  assert.ok(near > snap(4) && near < snap(4) + unit * 0.2, "靠近中心：偏离被缩小，方向不变");
+  // 边界：4 格和 5 格的分界在 snap(4) + unit/2；两边的显示大小必须相同，且等于指针位置
+  const edge = snap(4) + unit / 2;
+  assert.equal(magnetPx(edge, snap(4), unit), edge);
+  assert.equal(magnetPx(edge, snap(5), unit), edge);
+  // 一路扫过几格：单调，指针每动 1px 卡片动 0～2.4px，没有跳变
+  let prev = at(snap(3));
+  for (let raw = snap(3) + 1; raw <= snap(8); raw++) {
+    const cur = at(raw);
+    assert.ok(cur >= prev - 1e-9, `单调 @${raw}`);
+    assert.ok(cur - prev <= 2.4, `没有跳变 @${raw}：${cur - prev}`);
+    prev = cur;
+  }
+  // 比指针偏离格子中心小：永远在指针和目标之间
+  for (let raw = snap(4) - unit / 2; raw <= snap(4) + unit / 2; raw += 3) {
+    const d = magnetPx(raw, snap(4), unit);
+    assert.ok(Math.abs(d - snap(4)) <= Math.abs(raw - snap(4)) + 1e-9);
+  }
+  // 最大尺寸（目标 snap(6)）之外继续拖：封顶在外半格
+  assert.equal(magnetPx(snap(6) + unit * 5, snap(6), unit), snap(6) + unit / 2);
+  assert.equal(magnetPx(snap(6) - unit * 5, snap(6), unit), snap(6) - unit / 2);
 });

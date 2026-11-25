@@ -5,14 +5,14 @@
  * 拖动过程中不保存、不重画卡片内容，只改位置；松手保存一次。
  *
  * 手感上的几个做法：
- * - 被拖的卡每一帧都跟着指针走，像素级；调大小的卡和虚线占位框一起吸附到格子（过半格才进一格），看到多大松手就是多大。
+ * - 被拖的卡每一帧都跟着指针走，像素级；调大小的卡平滑跟手、被软吸附到目标格子（过半格才进一格），虚线占位框和角标显示目标大小。
  * - 指针事件合并到每帧处理一次；被拖的卡提升成独立的合成层，移动只是合成，不重绘。
  * - 落点就是指针所在的格子（虚线占位框立刻跟着走）；占位框压住别的卡时，那些卡要等指针在这一格停一会儿（180ms）才让开，
  *   划过去的途中别的卡一动不动，不会整个版面乱跳；占位框没压住任何卡时，不需要让位，立刻生效。
  * - 调大小时，移动途中只有卡片自己和虚线框在变，别的卡一动不动（它们的重排和动画是最费力的部分），
  *   指针停住 120ms 后才让位；内容每 200ms 重画一次。
  */
-import { COLS, GAP, GridItem, LimitsOf, ROW_H, cellsToPx, displacedCount, growItem, moveItemSnap, nudgeItem, placeItemSnap, pxToCells, resizeItem } from "./grid";
+import { COLS, GAP, GridItem, LimitsOf, ROW_H, cellsToPx, displacedCount, growItem, magnetPx, moveItemSnap, nudgeItem, placeItemSnap, pxToCells, resizeItem } from "./grid";
 import { MOTION, playLayout, snapshotRects } from "./motion";
 
 export interface GestureHost {
@@ -188,10 +188,11 @@ export class GridGesture {
         }
       }
       if (resize) {
-        // 卡片和虚线框一起吸附到格子：看到多大，松手就是多大
+        // 目标大小（虚线框和角标）吸附到格子；卡片自己软吸附：平滑跟手又被拉向目标，松手时滑进目标格子
         const next = resizeItem(base, id, pxToCells(cardRect.width + dx, unitX), pxToCells(cardRect.height + dy, unitY), h.limitsOf);
         const me = next.find((i) => i.id === id);
-        if (me) card.setCssProps({ width: `${cellsToPx(me.w, unitX)}px`, height: `${cellsToPx(me.h, unitY)}px` });
+        // 卡片平滑跟手，靠近格子中心时被拉向目标格子（整格跳动会一顿一顿）
+        if (me) card.setCssProps({ width: `${magnetPx(cardRect.width + dx, cellsToPx(me.w, unitX), unitX)}px`, height: `${magnetPx(cardRect.height + dy, cellsToPx(me.h, unitY), unitY)}px` });
         if (badge && me) badge.setText(`${me.w} × ${me.h}`);
         if (placeholder && me) setPlace(placeholder, me);
         follow(next);
