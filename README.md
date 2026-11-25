@@ -220,6 +220,10 @@ To release, run `npm version <patch|minor|major>` (updates `manifest.json` and `
 
 ## Changelog
 
+### 2.3.1
+
+- Resizing a card by its corner is smoother: the card follows the pointer and is gently pulled toward the target cell, so it no longer springs back to its old size when you let go before half a cell. The dashed box and the size badge show the target size. The corner handle is bigger (20 px to 28 px).
+
 ### 2.3.0
 
 - Appearance: a palette icon in the edit bar opens Background (follow theme, Gradient, Paper, up to 8 of your own colours and images, card opacity 0–100 %) and Theme (Default, Craft). Stored in `data.json`; existing setups look the same until you change something.
@@ -495,6 +499,10 @@ views:
 - 插件只在本地读取笔记，不联网，不收集任何数据。
 
 ### 更新日志
+
+**2.3.1**
+
+- 拖右下角调卡片大小更顺：卡片平滑跟着鼠标，靠近格子中心时被拉向目标格子，松手滑进格子；不再出现拖得不够半格、松手弹回原大小。虚线框和角标显示目标大小，右下角拖柄从 20px 放大到 28px。
 
 **2.3.0**
 

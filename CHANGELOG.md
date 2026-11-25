@@ -2,7 +2,7 @@
 
 The full history (English and 中文) is in the README. Highlights:
 
-## 未发布
+## 2.3.1
 
 - 拖角调大小：卡片平滑跟着鼠标，靠近格子中心时被拉向目标格子，松手滑进格子，不再出现“拖得不够半格松手弹回原大小”；虚线框和角标显示目标大小；右下角拖柄从 20px 放大到 28px。
 
