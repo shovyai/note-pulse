@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { COLS, GAP, GridItem, Limits, ROW_H, addItem, displacedCount, compact, findSpot, flowItems, growItem, moveItem, moveItemSnap, nudgeItem, overlap, placeItem, placeItemSnap, removeItem, repairItems, resizeItem, rowsToPx, sizeRange } from "../src/grid";
+import { COLS, GAP, GridItem, Limits, ROW_H, addItem, displacedCount, compact, findSpot, flowItems, growItem, moveItem, moveItemSnap, nudgeItem, overlap, placeItem, placeItemSnap, removeItem, repairItems, cellsToPx, pxToCells, resizeItem, rowsToPx, sizeRange } from "../src/grid";
 
 const LIM: Limits = { minW: 2, maxW: 12, minH: 2, maxH: 10 };
 const limitsOf = (id: string): Limits => (id.startsWith("n") ? { minW: 2, maxW: 4, minH: 2, maxH: 4 } : LIM);
@@ -361,4 +361,12 @@ test("落点精确：除了夹进栅格和排到最后一行，卡片总是落�
     const me = moveItem(base, c.id, x, y).find((i) => i.id === c.id)!;
     assert.equal(`${me.x},${me.y}`, `${x},${Math.min(y, bottom(c.id))}`, `${c.id} → ${x},${y}`);
   }
+});
+
+test("像素和格子互换：n 格 = n × 单位 − 间隙；半格以内四舍五入回原来的格数", () => {
+  const unit = ROW_H + GAP;
+  assert.equal(cellsToPx(3, unit), rowsToPx(3));
+  assert.equal(pxToCells(cellsToPx(4, unit), unit), 4);
+  assert.equal(pxToCells(cellsToPx(4, unit) + unit * 0.49, unit), 4, "不到半格：还是 4 格");
+  assert.equal(pxToCells(cellsToPx(4, unit) + unit * 0.51, unit), 5, "过了半格：5 格");
 });

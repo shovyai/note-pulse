@@ -33,6 +33,12 @@ export type LimitsOf = (id: string) => Limits;
 
 export const rowsToPx = (h: number): number => ROW_H * h + GAP * (h - 1);
 
+/** n 格占多少像素（unit = 一格加一条间隙） */
+export const cellsToPx = (n: number, unit: number): number => n * unit - GAP;
+
+/** 多少像素对应几格，四舍五入 */
+export const pxToCells = (px: number, unit: number): number => Math.round((px + GAP) / unit);
+
 export function overlap(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
